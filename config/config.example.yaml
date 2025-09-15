@@ -61,9 +61,9 @@ database:
                                 # SQLServer: 1433
   database: "rbac_admin"       # 数据库名称
                                 # 确保数据库已创建且有访问权限
-  username: "root"             # 数据库用户名
+  username: "your_username"    # 数据库用户名
                                 # 生产环境避免使用root，创建专用用户
-  password: ""                 # 数据库密码
+  password: "your_password"    # 数据库密码
                                 # 生产环境必须设置强密码
   charset: "utf8mb4"            # 数据库字符集
                                 # utf8mb4支持完整Unicode，包括emoji
@@ -89,9 +89,9 @@ redis:
                                 # 远程：IP地址或域名
                                 # Docker：容器名或服务名
   port: 6379                   # Redis服务器端口，默认6379
-  password: ""                 # Redis认证密码
-                                # 生产环境必须设置强密码
-                                # 空字符串表示无密码认证
+  password: "your_redis_password"  # Redis认证密码
+                                     # 生产环境必须设置强密码
+                                     # 空字符串表示无密码认证
   database: 0                  # Redis数据库编号(0-15)
                                 # 0：默认数据库
                                 # 1-15：可用于不同环境隔离
@@ -142,7 +142,7 @@ log:
 # JSON Web Token配置，用于用户认证和授权
 # 生产环境必须修改默认密钥，建议使用强随机字符串
 jwt:
-  secret: "your-secret-key-change-this"  # JWT签名密钥（⚠️ 必须修改）
+  secret: "your_jwt_secret_key_here"      # JWT签名密钥（⚠️ 必须修改）
                                         # 生产环境使用强随机字符串
                                         # 长度建议：32字节以上
                                         # 生成命令：openssl rand -hex 32

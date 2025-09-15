@@ -42,7 +42,7 @@ database:
                                 # - postgres: PostgreSQL
                                 # - sqlite: SQLite (轻量级，适合开发)
                                 # - sqlserver: Microsoft SQL Server
-  host: "192.168.10.199"        # 数据库服务器地址
+  host: "localhost"        # 数据库服务器地址
                                 # 本地：localhost, 127.0.0.1
                                 # 远程：IP地址或域名
                                 # Docker：容器名或服务名
@@ -50,9 +50,9 @@ database:
                                 # MySQL: 3306
                                 # PostgreSQL: 5432
                                 # SQLServer: 1433
-  username: "root"              # 数据库用户名
+  username: "your_username"              # 数据库用户名
                                 # 建议使用专用用户而非root
-  password: "Zdj_7819!"         # 数据库密码 (⚠️ 生产环境请修改)
+  password: "your_password"         # 数据库密码 (⚠️ 生产环境请修改)
   database: "rbac_admin"        # 数据库名称，自动创建
   charset: "utf8mb4"            # 字符集，推荐utf8mb4支持emoji
   collation: "utf8mb4_unicode_ci" # 排序规则，影响字符串比较
@@ -72,7 +72,7 @@ database:
 # JSON Web Token配置，用于用户认证和授权
 # 重要：JWT密钥必须保密，生产环境请使用强随机字符串
 jwt:
-  secret: "your-secret-key-change-this-in-production"  # JWT签名密钥 (⚠️ 必须修改)
+  secret: "your_jwt_secret_key_here"  # JWT签名密钥 (⚠️ 必须修改)
                                 # 建议使用32位以上随机字符串
                                 # 可使用命令：openssl rand -base64 32
   expire_hours: 24            # 访问令牌有效期(小时)
@@ -148,7 +148,7 @@ redis:
                                 # 远程：IP地址或域名
                                 # Docker：容器名或服务名
   port: 6379                    # Redis服务器端口，默认6379
-  password: ""                  # Redis认证密码 (⚠️ 生产环境请设置)
+  password: "your_redis_password"                  # Redis认证密码 (⚠️ 生产环境请设置)
                                 # 空字符串表示无密码
   db: 0                         # Redis数据库编号(0-15)
                                 # 0：默认数据库
