@@ -1,30 +1,38 @@
-# Binaries for programs and plugins
+# 编译输出
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
 
-# Test binary, built with `go test -c`
+# 测试二进制文件
 *.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# 日志文件
+logs/
+*.log
 
-# Go workspace file
-go.work
+# 环境配置文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# IDE files
+# 敏感配置文件
+settings.yaml
+config/config.yaml
+config/production.yaml
+
+# IDE文件
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS generated files
+# 操作系统文件
 .DS_Store
 .DS_Store?
 ._*
@@ -33,48 +41,28 @@ go.work
 ehthumbs.db
 Thumbs.db
 
-# Log files
-logs/
-*.log
+# 依赖目录
+vendor/
 
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# 构建输出
+dist/
+build/
 
-# Configuration files with sensitive information
-config.yaml
-config.yml
-config.json
-settings.yaml
-settings.yml
-settings.json
+# 临时文件
+tmp/
+temp/
 
-# Database files
+# 数据库文件
 *.db
 *.sqlite
 *.sqlite3
 
-# Temporary files
-tmp/
-temp/
-
-# Build outputs
-dist/
-build/
-bin/
-
-# Docker volumes
-docker-compose.override.yml
-
-# SSL certificates
+# 证书文件
 *.pem
-*.crt
 *.key
+*.crt
+*.csr
 
-# Backup files
+# 备份文件
 *.bak
 *.backup
-*.old
