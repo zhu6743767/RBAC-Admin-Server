@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  # Elasticsearch - 日志存储和搜索
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - elk_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Kibana - 日志可视化
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - xpack.security.enabled=false
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elk_network
+
+  # Logstash - 日志处理（可选）
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: logstash
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logstash/config:/usr/share/logstash/config:ro
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    environment:
+      - LS_JAVA_OPTS=-Xmx512m -Xms512m
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elk_network
+
+  # Filebeat - 日志收集
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.0
+    container_name: filebeat
+    user: root
+    volumes:
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./logs:/app/logs:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kibana:
+        condition: service_started
+    networks:
+      - elk_network
+    command: >
+      bash -c 'filebeat setup --template &&
+               filebeat setup --dashboards &&
+               filebeat -e -strict.perms=false'
+
+  # RBAC应用服务
+  rbac_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rbac_admin_server
+    environment:
+      - ENV=production
+      - LOG_LEVEL=info
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./logs:/app/logs
+      - ./settings.yaml:/app/settings.yaml:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elk_network
+
+volumes:
+  elasticsearch_data:
+    driver: local
+
+networks:
+  elk_network:
+    driver: bridge

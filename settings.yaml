@@ -1,0 +1,355 @@
+# =================================================================================
+# 🏗️ RBAC管理员服务器配置文件
+# =================================================================================
+# 📋 文件说明：
+#   这是RBAC管理员服务器的主配置文件，包含了服务器运行所需的所有配置项
+#   支持多种数据库类型（MySQL、PostgreSQL、SQLite、SQLServer）
+#   支持Redis缓存、JWT认证、CORS跨域、文件上传等功能
+#
+# 🎯 使用场景：
+#   - 本地开发环境配置
+#   - 生产环境部署
+#   - 测试环境配置
+#
+# ⚠️ 安全提醒：
+#   - 生产环境请修改默认密码和密钥
+#   - JWT密钥必须设置为强随机字符串
+#   - 数据库密码建议使用环境变量或密钥管理服务
+# =================================================================================
+
+# 🖥️ 服务器配置
+# 配置Web服务器的运行参数，影响服务的启动和运行行为
+server:
+  port: 8080                    # 服务监听端口，默认为8080
+                                # 开发环境：8080, 8081, 8082等
+                                # 生产环境：80, 443, 自定义端口
+  mode: "debug"                 # 运行模式：
+                                # - debug: 开发模式，启用调试信息，热重载
+                                # - release: 生产模式，性能优化，关闭调试
+                                # - test: 测试模式，用于单元测试
+  read_timeout: "30s"           # HTTP读取超时时间，防止客户端长时间无响应
+                                # 格式：数字+s/m/h，如30s, 1m, 1h
+  write_timeout: "30s"          # HTTP写入超时时间，防止响应发送超时
+  shutdown_timeout: "10s"       # 优雅关闭超时时间，服务停止前的等待时间
+                                # 用于处理正在进行的请求，避免强制终止
+
+# 🗄️ 数据库配置
+# 配置数据库连接参数，支持多种数据库类型
+# 重要：生产环境请使用环境变量或密钥管理服务存储密码
+database:
+  type: "mysql"                 # 数据库类型选择：
+                                # - mysql: MySQL/MariaDB (推荐)
+                                # - postgres: PostgreSQL
+                                # - sqlite: SQLite (轻量级，适合开发)
+                                # - sqlserver: Microsoft SQL Server
+  host: "192.168.10.199"        # 数据库服务器地址
+                                # 本地：localhost, 127.0.0.1
+                                # 远程：IP地址或域名
+                                # Docker：容器名或服务名
+  port: 3306                    # 数据库端口
+                                # MySQL: 3306
+                                # PostgreSQL: 5432
+                                # SQLServer: 1433
+  username: "root"              # 数据库用户名
+                                # 建议使用专用用户而非root
+  password: "Zdj_7819!"         # 数据库密码 (⚠️ 生产环境请修改)
+  database: "rbac_admin"        # 数据库名称，自动创建
+  charset: "utf8mb4"            # 字符集，推荐utf8mb4支持emoji
+  collation: "utf8mb4_unicode_ci" # 排序规则，影响字符串比较
+  max_open_conns: 100           # 最大打开连接数，防止连接耗尽
+                                # 建议：CPU核心数 * 2 + 有效磁盘数
+  max_idle_conns: 10            # 最大空闲连接数，保持连接池
+  conn_max_lifetime: "1h"       # 连接最大生命周期，防止连接老化
+  conn_max_idle_time: "30m"     # 空闲连接最大存活时间
+  ssl_mode: "disable"           # SSL连接模式：
+                                # - disable: 禁用SSL (开发环境)
+                                # - require: 需要SSL (生产环境)
+                                # - verify-ca: 验证CA证书
+                                # - verify-full: 验证CA和主机名
+  timeout: "30s"                # 数据库连接超时时间
+
+# 🔐 JWT认证配置
+# JSON Web Token配置，用于用户认证和授权
+# 重要：JWT密钥必须保密，生产环境请使用强随机字符串
+jwt:
+  secret: "your-secret-key-change-this-in-production"  # JWT签名密钥 (⚠️ 必须修改)
+                                # 建议使用32位以上随机字符串
+                                # 可使用命令：openssl rand -base64 32
+  expire_hours: 24            # 访问令牌有效期(小时)
+                                # 默认24小时，可根据安全需求调整
+                                # 移动端可设置为7天，Web端建议1-2小时
+  refresh_expire_hours: 168   # 刷新令牌有效期(小时) = 7天
+                                # 用于获取新的访问令牌，无需重新登录
+                                # 建议设置为7-30天
+  issuer: "rbac-admin-server" # 令牌颁发者标识
+                                # 用于验证令牌来源，防止伪造
+  audience: "rbac-admin-client" # 令牌受众标识
+                                # 用于验证令牌目标，防止误用
+
+# 🔐 安全配置
+# 应用安全相关配置，包括密码安全、防暴力破解、CSRF保护等
+security:
+  bcrypt_cost: 10               # bcrypt密码加密成本因子
+                                # 范围：4-31，值越大越安全但越慢
+                                # 10是平衡安全性和性能的推荐值
+  max_login_attempts: 5         # 最大登录失败次数
+                                # 超过此次数账户将被临时锁定
+                                # 防止暴力破解密码
+  lock_duration_minutes: 30     # 账户锁定时间(分钟)
+                                # 锁定后需等待指定时间才能再次尝试
+  session_timeout: "24h"        # 用户会话超时时间
+                                # 用户无操作多久后需要重新登录
+                                # 格式：数字+h/m/s
+  api_key_header: "X-API-Key"   # API密钥请求头名称
+                                # 用于API访问认证的自定义Header
+  enable_csrf: true             # 是否启用CSRF跨站请求伪造保护
+                                # Web应用强烈建议启用
+  csrf_secret: "csrf-secret-key" # CSRF令牌签名密钥 (⚠️ 生产环境请修改)
+                                # 用于生成和验证CSRF令牌
+
+# 🌐 CORS跨域配置
+# 跨源资源共享配置，解决浏览器跨域请求问题
+# 详细说明：https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS
+cors:
+  enable: true                  # 是否启用CORS跨域支持
+                                # 前后端分离项目必须启用
+  allow_origins:               # 允许的请求源列表
+    - "http://localhost:3000"   # React/Vue开发服务器
+    - "http://localhost:8080"   # 本地测试地址
+    - "http://127.0.0.1:3000"   # 本地IP地址
+                                # 生产环境：填写实际域名
+                                # 如需允许所有源：使用"*"但不推荐
+  allow_methods:               # 允许的HTTP方法
+    - "GET"                    # 获取资源
+    - "POST"                   # 创建资源
+    - "PUT"                    # 更新资源
+    - "DELETE"                 # 删除资源
+    - "OPTIONS"                # 预检请求，浏览器自动发送
+  allow_headers:               # 允许的请求头
+    - "Content-Type"           # 内容类型
+    - "Authorization"          # JWT令牌认证
+    - "X-Requested-With"     # AJAX请求标识
+    - "Accept"                 # 接受的响应类型
+    - "Origin"                 # 请求来源
+  expose_headers:              # 暴露给前端JavaScript的响应头
+    - "Content-Length"         # 响应内容长度
+    - "Access-Control-Allow-Origin" # CORS允许源
+  allow_credentials: true       # 是否允许携带凭证(Cookies, Authorization)
+                                # 设置为true时，allow_origins不能为"*"
+  max_age: "12h"               # 预检请求缓存时间
+                                # 减少重复预检请求，提高性能
+
+# 🔄 Redis缓存配置
+# Redis缓存服务器配置，用于会话存储、缓存、消息队列等
+# 详细说明：https://redis.io/documentation
+redis:
+  host: "192.168.10.199"        # Redis服务器地址
+                                # 本地：localhost, 127.0.0.1
+                                # 远程：IP地址或域名
+                                # Docker：容器名或服务名
+  port: 6379                    # Redis服务器端口，默认6379
+  password: ""                  # Redis认证密码 (⚠️ 生产环境请设置)
+                                # 空字符串表示无密码
+  db: 0                         # Redis数据库编号(0-15)
+                                # 0：默认数据库
+                                # 1-15：可用于不同环境或应用
+  pool_size: 100                # 连接池最大连接数
+                                # 高并发环境可适当增加
+  min_idle_conns: 10            # 连接池最小空闲连接数
+                                # 保持一定数量的连接，避免频繁创建
+  dial_timeout: "5s"            # 连接建立超时时间
+                                # 网络延迟高时可适当增加
+  read_timeout: "3s"            # 读取数据超时时间
+  write_timeout: "3s"           # 写入数据超时时间
+  max_retries: 3                # 操作失败最大重试次数
+                                # 网络不稳定时可增加重试次数
+
+# 📝 日志配置
+# 应用日志配置，支持多种输出格式和轮转策略
+# 详细说明：https://github.com/sirupsen/logrus\log:
+  level: "info"               # 日志级别，控制输出详细程度：
+                              # - debug: 最详细，包含调试信息
+                              # - info: 一般信息，生产环境推荐
+                              # - warn: 警告信息
+                              # - error: 错误信息
+  format: "json"              # 日志输出格式：
+                              # - json: 结构化日志，便于日志分析
+                              # - text: 人类可读格式，开发环境推荐
+  output: "both"              # 日志输出位置：
+                              # - stdout: 标准输出，容器环境推荐
+                              # - file: 文件输出，传统部署推荐
+                              # - both: 同时输出到stdout和文件
+  log_dir: "./logs"            # 日志文件存储目录
+                              # 确保目录存在且有写入权限
+  max_size: 100                # 单个日志文件最大大小(MB)
+                              # 超过此大小自动切分新文件
+  max_age: 7                   # 日志文件最大保留天数
+                              # 过期文件自动清理
+  max_backups: 3              # 保留的旧日志文件数量
+                              # 超过数量自动删除最旧的
+  compress: true               # 是否压缩旧日志文件
+                              # 节省磁盘空间，但增加CPU开销
+  local_time: true             # 使用本地时间而非UTC时间
+  enable_caller: true          # 记录日志调用位置
+                              # 包含文件名、函数名、行号
+  enable_trace: true           # 错误时记录堆栈跟踪
+                              # 便于调试和错误定位
+
+# ⚡ 性能配置
+# 系统性能调优配置，控制并发、连接池和限流策略
+# 根据服务器配置和业务负载调整这些参数
+performance:
+  enable_pprof: false           # 性能分析工具
+                                # 仅在调试时启用，生产环境关闭
+  max_upload_size: "100MB"      # 最大上传文件大小
+                                # 大文件上传需同时调整反向代理和数据库超时
+  request_rate_limit: 100       # 每秒请求限制（令牌桶算法）
+                                # 100 rps = 每分钟6000次请求
+                                # 根据业务峰值和服务器能力设置
+  burst_rate_limit: 200         # 突发请求限制
+                                # 允许短时间内的突发流量
+                                # 建议设置为rate_limit的2倍
+  enable_compression: true        # 启用响应压缩（gzip）
+                                # 减少网络传输量，但增加CPU开销
+  compression_level: 6          # 压缩级别1-9
+                                # 6是平衡压缩率和CPU消耗的最佳值
+
+# 📂 文件上传配置
+# 文件上传功能配置，包括大小限制、文件类型过滤、存储路径等
+# 注意：生产环境需配合反向代理设置上传大小限制
+upload:
+  max_file_size: "50MB"         # 单个文件最大大小
+                                # 需与反向代理(nginx)和性能配置保持一致
+                                # 大文件上传需调整超时时间
+  max_files: 5                  # 单次上传最大文件数
+                                # 防止批量上传攻击，合理设置限制
+  allowed_types:                # 允许的文件类型MIME列表
+    - "image/jpeg"              # JPEG图片
+    - "image/png"               # PNG图片
+    - "image/gif"               # GIF图片
+    - "application/pdf"         # PDF文档
+    - "text/plain"              # 文本文件
+    # 其他常用类型：
+    # - "application/msword"    # Word文档
+    # - "application/vnd.ms-excel" # Excel文档
+    # - "video/mp4"             # MP4视频
+  upload_dir: "./uploads"        # 上传文件存储目录
+                                # 确保目录存在且有写入权限
+                                # 建议使用绝对路径避免相对路径问题
+  temp_dir: "./temp"            # 临时文件存储目录
+                                # 上传过程中的临时文件存放位置
+                                # 需定期清理避免磁盘空间耗尽
+  cleanup_interval: "24h"       # 临时文件清理间隔
+                                # 设置为0表示不自动清理
+                                # 建议设置为1-24小时
+  enable_virus_scan: false       # 是否启用病毒扫描
+                                # 需要集成第三方病毒扫描服务
+                                # 如ClamAV、Virustotal等
+  virus_scan_api: ""            # 病毒扫描API地址
+                                # 示例：https://api.virustotal.com/vtapi/v2/file/scan
+
+# 🔍 监控配置
+# 系统监控和可观测性配置，支持Prometheus指标、健康检查、分布式追踪
+# 生产环境建议全部启用以便问题排查和性能监控
+monitoring:
+  enable_health_check: true    # 启用健康检查端点
+                               # 用于负载均衡和容器编排的健康检测
+                               # 访问地址：http://localhost:8080/health
+  health_check_path: "/health" # 健康检查HTTP路径
+                               # 返回200表示健康，503表示不健康
+  enable_metrics: true         # 启用Prometheus指标收集
+                               # 提供HTTP请求、数据库连接、系统资源等指标
+                               # 访问地址：http://localhost:9090/metrics
+  metrics_path: "/metrics"     # 指标HTTP路径
+                               # Prometheus配置中需匹配此路径
+  enable_tracing: false        # 启用分布式追踪(Jaeger)
+                               # 用于请求链路追踪和性能分析
+                               # 生产环境建议启用，开发环境可关闭
+  tracing_endpoint: ""         # Jaeger收集器端点地址
+                               # 示例：http://jaeger:14268/api/traces
+                               # Docker环境使用服务名：http://jaeger:14268/api/traces
+
+# 🎯 应用配置
+# 应用级配置，包含基本信息、默认设置、邮件服务等
+# 这些配置影响整个应用的行为和用户体验
+app:
+  name: "RBAC Admin Server"     # 应用名称
+                                # 显示在页面标题、邮件模板、API文档中
+  version: "1.0.0"             # 应用版本号
+                                # 用于API版本控制、缓存失效、兼容性检查
+  env: "development"            # 运行环境：
+                                # - development: 开发环境（调试信息、热重载）
+                                # - staging: 预发布环境（接近生产配置）
+                                # - production: 生产环境（性能优化、错误隐藏）
+  debug: true                  # 调试模式开关
+                                # 开发环境：true（显示详细错误、SQL日志）
+                                # 生产环境：false（隐藏敏感信息）
+  timezone: "Asia/Shanghai"     # 应用时区设置
+                                # 影响时间显示、计划任务、数据库时间戳
+                                # 常用值：Asia/Shanghai, UTC, America/New_York
+  language: "zh-CN"            # 默认界面语言
+                                # 支持多语言切换时的默认选项
+  admin_user: "admin"          # 默认管理员用户名
+                                # 首次启动时自动创建的管理员账户
+                                # 生产环境必须修改默认值
+  admin_password: "admin123"    # 默认管理员密码（⚠️ 生产环境必须修改）
+                                # 建议使用强密码：大小写字母+数字+特殊字符
+  admin_email: "admin@example.com" # 默认管理员邮箱
+                                # 用于接收系统通知、密码重置等
+  session_timeout: "24h"        # 用户会话超时时间
+                                # 格式：数字+单位（h=小时, m=分钟, s=秒）
+                                # 安全建议：生产环境设置为1-4小时
+  enable_registration: true      # 是否允许用户自助注册
+                                # 内部系统建议关闭，只允许管理员创建用户
+  enable_email_verification: false # 是否启用邮箱验证
+                                # 需要配置邮件服务才能正常工作
+                                # 生产环境建议启用增强安全性
+  email_service: "smtp"        # 邮件服务提供商：
+                                # - smtp: 标准SMTP协议（通用）
+                                # - sendgrid: SendGrid API
+                                # - aliyun: 阿里云邮件推送
+  email_host: "smtp.gmail.com"   # SMTP服务器地址
+                                # Gmail: smtp.gmail.com
+                                # 阿里云: smtpdm.aliyun.com
+                                # QQ邮箱: smtp.qq.com
+  email_port: 587              # SMTP服务器端口
+                                # 常用端口：25（明文）、465（SSL）、587（TLS）
+  email_username: ""            # SMTP认证用户名
+                                # 通常是完整的邮箱地址
+  email_password: ""            # SMTP认证密码
+                                # 非邮箱密码，而是SMTP授权码
+                                # 获取方式：邮箱设置->SMTP/IMAP->生成授权码
+  email_from: ""                # 发件人邮箱地址
+                                # 必须与username一致或属于同一域名
+  email_from_name: ""           # 发件人显示名称
+                                # 用户收到的邮件中显示的发件人名称
+
+# 📖 Swagger文档配置
+# Swagger/OpenAPI 3.0文档配置，用于自动生成API文档
+# 访问地址：http://localhost:8080/swagger/index.html
+swagger:
+  enable: true                 # 是否启用Swagger
+                                # 生产环境建议关闭或添加认证
+  title: "RBAC管理员服务器API"   # API文档标题
+                                # 显示在Swagger UI页面顶部
+  description: "基于角色的访问控制管理员服务器RESTful API" # API文档描述
+                                # 支持Markdown格式，可包含详细说明
+  version: "1.0.0"            # API版本号
+                                # 遵循语义化版本规范：主版本.次版本.修订版本
+  host: "localhost:8080"       # API服务器主机地址
+                                # 生产环境需修改为实际域名或IP
+                                # 示例：api.example.com:8080
+  base_path: "/api/v1"        # API基础路径
+                                # 所有API路径的前缀
+  schemes:                     # 支持的协议方案
+    - "http"                   # HTTP协议（开发环境）
+    - "https"                  # HTTPS协议（生产环境推荐）
+  contact_name: "管理员"         # API联系人姓名
+                                # 用于文档中的技术支持联系
+  contact_email: "admin@example.com" # API联系人邮箱
+                                # 用户反馈和技术支持邮箱
+  license_name: "MIT"         # API许可证名称
+                                # 常见的有MIT、Apache 2.0、GPL等
+  license_url: "https://opensource.org/licenses/MIT" # 许可证URL
+                                # 指向完整许可证文本的链接
+  enable_ui: true              # 是否启用Swagger UI

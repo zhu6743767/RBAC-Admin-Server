@@ -1,0 +1,136 @@
+# =================================================================================
+# 🐳 Docker Compose 配置文件
+# =================================================================================
+# 📋 文件说明：
+#   这是Docker Compose配置文件，用于一键部署完整的RBAC管理员服务器环境
+#   包含MySQL、PostgreSQL、Redis和RBAC服务器四个服务
+#
+# 🎯 使用场景：
+#   - 本地开发环境快速搭建
+#   - 测试环境部署
+#   - 生产环境容器化部署
+#
+# 🚀 快速开始：
+#   1. 确保已安装Docker和Docker Compose
+#   2. 在项目根目录执行：docker-compose up -d
+#   3. 访问：http://localhost:8080
+#
+# 📊 服务端口：
+#   - MySQL: 3306
+#   - PostgreSQL: 5432  
+#   - Redis: 6379
+#   - RBAC服务器: 8080
+#
+# 💾 数据持久化：
+#   - MySQL数据：./mysql_data
+#   - PostgreSQL数据：./postgres_data
+#   - Redis数据：./redis_data
+# =================================================================================
+
+version: '3.8'
+
+services:
+  # MySQL数据库
+  mysql:
+    image: mysql:8.0
+    container_name: rbac_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: rbac_admin
+      MYSQL_USER: rbac_user
+      MYSQL_PASSWORD: rbac_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init/mysql:/docker-entrypoint-initdb.d
+    networks:
+      - rbac_network
+
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:15
+    container_name: rbac_postgres
+    environment:
+      POSTGRES_DB: rbac_admin
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init/postgres:/docker-entrypoint-initdb.d
+    networks:
+      - rbac_network
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: rbac_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - rbac_network
+
+  # RBAC管理员服务器
+  rbac_server:
+    build: .
+    container_name: rbac_admin_server
+    depends_on:
+      - mysql
+      - postgres
+      - redis
+    environment:
+      # 数据库配置（选择一种）
+      # MySQL配置
+      DB_TYPE: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USERNAME: rbac_user
+      DB_PASSWORD: rbac_password
+      DB_NAME: rbac_admin
+      
+      # PostgreSQL配置（可选）
+      # DB_TYPE: postgres
+      # DB_HOST: postgres
+      # DB_PORT: 5432
+      # DB_USERNAME: postgres
+      # DB_PASSWORD: postgres
+      # DB_NAME: rbac_admin
+      
+      # Redis配置
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      
+      # 服务器配置
+      SERVER_PORT: 8080
+      SERVER_HOST: 0.0.0.0
+      
+      # JWT配置
+      JWT_SECRET: your_jwt_secret_key_here
+      JWT_EXPIRE: 7200
+      
+      # 日志配置
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      LOG_OUTPUT: stdout
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    networks:
+      - rbac_network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  postgres_data:
+  redis_data:
+
+networks:
+  rbac_network:
+    driver: bridge
