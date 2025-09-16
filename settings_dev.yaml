@@ -17,7 +17,7 @@ server:
   write_timeout: 30s
   shutdown_timeout: 30s
 
-# 数据库配置 - 开发环境使用SQLite
+# 数据库配置 - 开发环境使用SQLite纯Go驱动
 # 生产环境请切换到MySQL或PostgreSQL
 database:
   type: "sqlite"                # 开发环境使用SQLite
@@ -28,7 +28,7 @@ database:
   database: "rbac_admin_dev"
   path: "./data/rbac_admin_dev.db"
   charset: "utf8mb4"
-  driver: "sqlite3"            # SQLite驱动
+  driver: "sqlite"              # 使用纯Go SQLite驱动
   max_open_conns: 10           # 开发环境连接数较少
   max_idle_conns: 5
   conn_max_lifetime: 1h

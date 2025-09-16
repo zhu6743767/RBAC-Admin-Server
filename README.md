@@ -1,269 +1,161 @@
-# RBAC Admin Server
+# RBAC管理员服务器
 
-A modern Role-Based Access Control (RBAC) admin server built with Go, supporting multiple database connections with factory pattern design.
+一个基于Go的RBAC（基于角色的访问控制）管理系统，支持多环境配置和灵活的配置管理。
 
----
+## 🚀 快速开始
 
-## ✨ Features
+### 1. 环境准备
 
-- 🏭 **Database Factory Pattern**  
-  Support for MySQL, PostgreSQL, SQLite, SQL Server
-- 🔧 **Enterprise Configuration**  
-  11 configuration modules with environment variable override
-- 🔄 **Auto Migration**  
-  Automatic database table creation and updates
-- 🔐 **JWT Authentication**  
-  Secure user authentication and permission management
-- 📊 **Structured Logging**  
-  High-performance logging system based on Zap
-- 🐳 **Docker Support**  
-  Complete containerized deployment solution
-- 📈 **Monitoring**  
-  Prometheus metrics collection and health checks
-- 📚 **API Documentation**  
-  Auto-generated Swagger API docs
+确保已安装：
+- Go 1.24.0 或更高版本
+- Git
 
----
-
-## 🚀 Quick Start
-
-### 1. Environment Requirements
-
-- Go 1.21+
-- Docker (optional)
-- MySQL/PostgreSQL/SQLite (choose based on configuration)
-
-### 2. Install Dependencies
+### 2. 获取项目
 
 ```bash
-go mod tidy
+git clone <your-repo-url>
+cd rbac_admin_server
 ```
 
-### 3. Configuration
+### 3. 配置环境
 
-Copy the configuration template:
-
+#### 开发环境
 ```bash
-cp settings.example.yaml settings.yaml
+# 使用开发环境配置
+go run main_final.go -env dev
 ```
 
-Then edit `settings.yaml` with your actual database credentials and settings.
-
-### 4. Start the Project
-
-#### Using SQLite (Recommended for Development)
-
+#### 测试环境
 ```bash
-# No database installation needed, run directly
-go run main.go
+# 使用测试环境配置
+go run main_final.go -env test
 ```
 
-#### Using MySQL
-
+#### 生产环境
 ```bash
-# Update settings.yaml with your MySQL credentials
-go run main.go
+# 1. 复制环境变量模板
+cp .env.example .env
+
+# 2. 编辑 .env 文件，设置实际的环境变量值
+
+# 3. 使用生产环境配置
+go run main_final.go -env prod
 ```
 
-#### Using PostgreSQL
+### 4. 自定义配置
 
+可以通过以下方式指定配置文件：
 ```bash
-# Update settings.yaml with your PostgreSQL credentials
-go run main.go
+go run main_final.go -config /path/to/your/config.yaml
 ```
 
-### 5. Verify Startup
+## 📁 项目结构
 
-Visit these addresses to verify the project is running:
-
-- API Documentation: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
-- Health Check: [http://localhost:8080/health](http://localhost:8080/health)
-- Default Admin: `admin/admin123`
-
----
-
-## 🏗️ Project Structure
-
-```yaml
+```
 rbac_admin_server/
-  api/                    # RESTful API endpoints
-  config/                 # Configuration management system
-    config.go             # Configuration struct definitions
-    loader.go             # Configuration loader
-  core/                   # Core startup logic
-    initializer.go        # Project initializer
-    audit/                # Audit logging system
-    errors/               # Error handling system
-  database/               # Database factory system
-    database_factory.go   # Database factory core implementation
-    migrator.go           # Database migration and initialization
-    models/               # Data model definitions
-      user.go             # User, role, permission models
-  examples/               # Usage examples
-  global/                 # Global variable management
-  main.go                 # Program entry point
-  settings.example.yaml   # Configuration template (safe)
-  docker-compose.yml      # Docker deployment configuration
-  Dockerfile              # Docker image build
-  go.mod                  # Dependency management
+├── config/                 # 配置管理
+│   ├── config.go          # 配置结构体定义
+│   └── loader.go          # 配置加载器
+├── settings_dev.yaml      # 开发环境配置
+├── settings_test.yaml     # 测试环境配置
+├── settings_prod.yaml     # 生产环境配置
+├── .env.example           # 环境变量模板
+├── .env                   # 生产环境变量（需要创建）
+├── CONFIG_GUIDE.md        # 配置指南
+├── main_simple.go         # 配置测试脚本
+└── main_final.go          # 最终主程序
 ```
 
----
+## ⚙️ 配置系统特性
 
-## 📊 Database Support
+### 🎯 多环境支持
+- **开发环境** (`dev`): 使用SQLite，调试模式开启
+- **测试环境** (`test`): 使用MySQL，调试模式关闭
+- **生产环境** (`prod`): 使用MySQL，调试模式关闭，环境变量配置
 
-### Configuration Examples
+### 🔧 配置优先级
+1. 命令行参数 (`-config`)
+2. 环境变量 (`.env`文件或系统环境变量)
+3. YAML配置文件
+4. 默认值
 
-#### MySQL
+### 📊 配置验证
+- 自动验证配置完整性
+- 友好的错误提示
+- 支持环境变量替换
 
-```yaml
-database:
-  type: "mysql"
-  host: "localhost"
-  port: 3306
-  username: "your_username"      # Change to your MySQL username
-  password: "your_password"      # Change to your MySQL password
-  database: "rbac_admin"
-  charset: "utf8mb4"
-```
+### 🔒 安全特性
+- 敏感信息通过环境变量管理
+- JWT密钥配置
+- CORS跨域配置
+- 安全头配置
 
-#### PostgreSQL
+## 🧪 测试配置
 
-```yaml
-database:
-  type: "postgres"
-  host: "localhost"
-  port: 5432
-  username: "your_username"        # Change to your PostgreSQL username
-  password: "your_password"        # Change to your PostgreSQL password
-  database: "rbac_admin"
-```
-
-#### SQLite (Development Recommended)
-
-```yaml
-database:
-  type: "sqlite"
-  path: "./rbac_admin.db"
-```
-
----
-
-## 🐳 Docker Deployment
-
-### Using Docker Compose
+项目提供了配置测试功能：
 
 ```bash
-# Start all services (MySQL + Redis + RBAC server)
-docker-compose up -d
-
-# View logs
-docker-compose logs -f rbac_server
-
-# Stop services
-docker-compose down
+# 测试所有环境配置
+go run main_simple.go -env dev   # 开发环境
+go run main_simple.go -env test  # 测试环境
+go run main_simple.go -env prod  # 生产环境
 ```
 
-### Build Image Separately
+## 📋 环境变量
+
+生产环境需要设置以下环境变量（参考 `.env.example`）：
 
 ```bash
-# Build image
-docker build -t rbac-admin-server .
+# 服务器配置
+SERVER_PORT=8080
 
-# Run container
-docker run -p 8080:8080 rbac-admin-server
+# 数据库配置
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=rbac_prod
+
+# Redis配置
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# JWT配置
+JWT_SECRET=your-super-secret-jwt-key
+JWT_ISSUER=rbac-admin-prod
+JWT_AUDIENCE=rbac-admin-users
+
+# 应用配置
+APP_NAME=RBAC管理员
+APP_VERSION=1.0.0
+APP_ENVIRONMENT=production
+
+# 安全与监控
+SECURITY_ENABLED=true
+CORS_ALLOWED_ORIGINS=https://yourdomain.com
+METRICS_ENABLED=true
 ```
 
----
+## 📝 开发指南
 
-## 🔐 Default Accounts
+### 添加新配置
+1. 在 `config/config.go` 中添加新的配置结构体
+2. 在 `config/loader.go` 中添加默认值和环境变量处理
+3. 在所有环境的YAML配置文件中添加相应配置
+4. 更新 `.env.example` 文件
+5. 更新 `CONFIG_GUIDE.md` 文档
 
-Automatically created on first startup:
+### 配置调试
+使用配置测试脚本快速验证配置：
+```bash
+go run main_simple.go -env dev
+```
 
-- **Username**: admin
-- **Password**: admin123
-- **Role**: Super Administrator
-- **Permissions**: All permissions
+## 🤝 贡献
 
----
+欢迎提交Issue和Pull Request来改进配置系统！
 
-## 📚 API Documentation
+## 📄 许可证
 
-After starting the project, visit:
-
-- Swagger Documentation: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
-- Health Check: [http://localhost:8080/health](http://localhost:8080/health)
-- Metrics: [http://localhost:8080/metrics](http://localhost:8080/metrics)
-
----
-
-## 🔧 Development Guide
-
-### Adding New API Endpoints
-
-1. Create new route files in the `api/` directory
-2. Implement corresponding handler functions
-3. Register routes in main.go
-4. Update Swagger documentation
-
-### Database Model Extension
-
-1. Add new models in the `database/models/` directory
-2. Update migration logic in `migrator.go`
-3. Run the project for automatic migration
-
-### Configuration Extension
-
-1. Add new configuration structs in `config/config.go`
-2. Update `settings.example.yaml` template
-3. Add validation logic in `loader.go`
-
----
-
-## 🔒 Security Notes
-
-> ⚠️ **Important Security Reminders:**
-
-1. **Never commit sensitive configuration files**:
-   - `settings.yaml` (contains database passwords)
-   - `.env` files
-   - SSL certificates
-   - API keys
-
-2. **Production Security Checklist**:
-   - Change all default passwords
-   - Use strong JWT secrets
-   - Enable HTTPS
-   - Configure proper CORS
-   - Set up rate limiting
-   - Use environment variables for sensitive data
-
-3. **Environment Variables**:
-
-   ```bash
-   export DB_PASSWORD="your_secure_password"
-   export JWT_SECRET="your_strong_jwt_secret"
-   export REDIS_PASSWORD="your_redis_password"
-   ```
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 📞 Support
-
-For support, please open an issue in the GitHub repository or contact the development team.
+MIT License

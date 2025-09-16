@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"rbac.admin/config"
+	"rbac.admin/core"
 	"rbac.admin/global"
 )
 
@@ -34,22 +35,26 @@ func main() {
 	// 设置全局配置
 	global.Config = cfg
 
+	// 初始化日志
+	if err := core.InitLogger(&cfg.Log); err != nil {
+		log.Fatalf("❌ 日志初始化失败: %v", err)
+	}
+
+	// 初始化数据库
+	if err := core.InitDatabase(&cfg.Database); err != nil {
+		log.Fatalf("❌ 数据库初始化失败: %v", err)
+	}
+
+	// 初始化Redis
+	if err := core.InitRedis(&cfg.Redis); err != nil {
+		log.Fatalf("❌ Redis初始化失败: %v", err)
+	}
+
 	// 显示环境信息
 	displayEnvironmentInfo()
 
-	// 创建项目初始化器
-	initializer := NewInitializer(cfg)
-	
-	// 执行完整项目初始化
-	if err := initializer.Initialize(); err != nil {
-		log.Fatalf("❌ 项目初始化失败: %v", err)
-	}
-
-	// 显示启动信息
-	displayStartupInfo()
-
-	// 设置优雅关闭
-	initializer.WaitForSignal()
+	// 启动服务器
+	core.RunServer(cfg)
 }
 
 // loadConfig 根据环境加载对应的配置文件

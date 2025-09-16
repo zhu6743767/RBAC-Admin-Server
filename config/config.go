@@ -23,6 +23,7 @@ type Config struct {
 	Upload      UploadConfig      `yaml:"upload"`      // 文件上传配置
 	Monitoring  MonitoringConfig  `yaml:"monitoring"`  // 监控配置
 	Swagger     SwaggerConfig     `yaml:"swagger"`     // Swagger文档配置
+	App         AppConfig         `yaml:"app"`         // 应用配置
 }
 
 // ServerConfig 服务器配置结构体
@@ -157,6 +158,14 @@ type SwaggerConfig struct {
 	EnableUI    bool   `yaml:"enable_ui"`   // 是否启用Swagger UI
 }
 
+// AppConfig 应用配置结构体
+type AppConfig struct {
+	Name        string `yaml:"name"`        // 应用名称
+	Version     string `yaml:"version"`     // 应用版本
+	Environment string `yaml:"environment"` // 应用环境
+	Debug       bool   `yaml:"debug"`       // 是否调试模式
+}
+
 // DefaultConfig 返回默认配置
 func DefaultConfig() *Config {
 	return &Config{
@@ -263,6 +272,12 @@ func DefaultConfig() *Config {
 			Host:        "localhost:8080",
 			BasePath:    "/api/v1",
 			EnableUI:    true,
+		},
+		App: AppConfig{
+			Name:        "RBAC管理员",
+			Version:     "1.0.0",
+			Environment: "development",
+			Debug:       true,
 		},
 	}
 }
