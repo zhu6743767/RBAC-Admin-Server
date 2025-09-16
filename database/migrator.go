@@ -19,11 +19,13 @@ func NewMigrator(db *gorm.DB) *Migrator {
 // AutoMigrate 自动迁移所有模型
 func (m *Migrator) AutoMigrate() error {
 	modelList := []interface{}{
-		&models.User{},
-		&models.Role{},
-		&models.Permission{},
+		&models.UserModel{},
+		&models.RoleModel{},
+		&models.MenuModel{},
+		&models.ApiModel{},
 		&models.UserRole{},
-		&models.RolePermission{},
+		&models.RoleMenu{},
+		&models.RoleApi{},
 		&models.LoginLog{},
 		&models.OperationLog{},
 	}
@@ -35,11 +37,13 @@ func (m *Migrator) AutoMigrate() error {
 func (m *Migrator) MigrateWithOptions(dropIndex bool, modelList ...interface{}) error {
 	if len(modelList) == 0 {
 		modelList = []interface{}{
-			&models.User{},
-			&models.Role{},
-			&models.Permission{},
+			&models.UserModel{},
+			&models.RoleModel{},
+			&models.MenuModel{},
+			&models.ApiModel{},
 			&models.UserRole{},
-			&models.RolePermission{},
+			&models.RoleMenu{},
+			&models.RoleApi{},
 			&models.LoginLog{},
 			&models.OperationLog{},
 		}
@@ -62,34 +66,44 @@ func (m *Migrator) MigrateWithOptions(dropIndex bool, modelList ...interface{}) 
 func (m *Migrator) SeedData() error {
 	// 检查是否已经存在数据
 	var count int64
-	m.db.Model(&models.User{}).Count(&count)
+	m.db.Model(&models.UserModel{}).Count(&count)
 	if count > 0 {
 		// 暂时移除日志，避免循环依赖
 		return nil
 	}
 
-	// 创建默认权限
-	permissions := []models.Permission{
-		{Name: "user:create", Description: "创建用户", Resource: "user", Action: "create"},
-		{Name: "user:read", Description: "查看用户", Resource: "user", Action: "read"},
-		{Name: "user:update", Description: "更新用户", Resource: "user", Action: "update"},
-		{Name: "user:delete", Description: "删除用户", Resource: "user", Action: "delete"},
-		{Name: "role:create", Description: "创建角色", Resource: "role", Action: "create"},
-		{Name: "role:read", Description: "查看角色", Resource: "role", Action: "read"},
-		{Name: "role:update", Description: "更新角色", Resource: "role", Action: "update"},
-		{Name: "role:delete", Description: "删除角色", Resource: "role", Action: "delete"},
-		{Name: "permission:create", Description: "创建权限", Resource: "permission", Action: "create"},
-		{Name: "permission:read", Description: "查看权限", Resource: "permission", Action: "read"},
-		{Name: "permission:update", Description: "更新权限", Resource: "permission", Action: "update"},
-		{Name: "permission:delete", Description: "删除权限", Resource: "permission", Action: "delete"},
+	// 创建默认API权限
+	apis := []models.ApiModel{
+		{Name: "创建用户", Path: "/api/users", Method: "POST", Group: "用户管理", Description: "创建用户"},
+		{Name: "查看用户", Path: "/api/users", Method: "GET", Group: "用户管理", Description: "查看用户"},
+		{Name: "更新用户", Path: "/api/users/:id", Method: "PUT", Group: "用户管理", Description: "更新用户"},
+		{Name: "删除用户", Path: "/api/users/:id", Method: "DELETE", Group: "用户管理", Description: "删除用户"},
+		{Name: "创建角色", Path: "/api/roles", Method: "POST", Group: "角色管理", Description: "创建角色"},
+		{Name: "查看角色", Path: "/api/roles", Method: "GET", Group: "角色管理", Description: "查看角色"},
+		{Name: "更新角色", Path: "/api/roles/:id", Method: "PUT", Group: "角色管理", Description: "更新角色"},
+		{Name: "删除角色", Path: "/api/roles/:id", Method: "DELETE", Group: "角色管理", Description: "删除角色"},
+		{Name: "查看菜单", Path: "/api/menus", Method: "GET", Group: "菜单管理", Description: "查看菜单"},
+		{Name: "创建菜单", Path: "/api/menus", Method: "POST", Group: "菜单管理", Description: "创建菜单"},
 	}
 
-	if err := m.db.Create(&permissions).Error; err != nil {
+	if err := m.db.Create(&apis).Error; err != nil {
+		return err
+	}
+
+	// 创建默认菜单
+	menus := []models.MenuModel{
+		{Name: "系统管理", Path: "/system", Component: "Layout", Sort: 1, Status: 1, Type: 0, Title: "系统管理", Icon: "system"},
+		{Name: "用户管理", Path: "/system/users", Component: "system/user/index", Sort: 1, Status: 1, Type: 1, Title: "用户管理", Icon: "user"},
+		{Name: "角色管理", Path: "/system/roles", Component: "system/role/index", Sort: 2, Status: 1, Type: 1, Title: "角色管理", Icon: "role"},
+		{Name: "菜单管理", Path: "/system/menus", Component: "system/menu/index", Sort: 3, Status: 1, Type: 1, Title: "菜单管理", Icon: "menu"},
+	}
+
+	if err := m.db.Create(&menus).Error; err != nil {
 		return err
 	}
 
 	// 创建管理员角色
-	adminRole := models.Role{
+	adminRole := models.RoleModel{
 		Name:        "admin",
 		Description: "系统管理员",
 		Status:      1,
@@ -98,19 +112,30 @@ func (m *Migrator) SeedData() error {
 		return err
 	}
 
-	// 为管理员角色分配所有权限
-	var allPermissions []models.Permission
-	m.db.Find(&allPermissions)
-	for _, permission := range allPermissions {
-		rolePermission := models.RolePermission{
-			RoleID:       adminRole.ID,
-			PermissionID: permission.ID,
+	// 为管理员角色分配所有API权限
+	var allApis []models.ApiModel
+	m.db.Find(&allApis)
+	for _, api := range allApis {
+		roleApi := models.RoleApi{
+			RoleID: adminRole.ID,
+			ApiID:  api.ID,
 		}
-		m.db.Create(&rolePermission)
+		m.db.Create(&roleApi)
+	}
+
+	// 为管理员角色分配所有菜单权限
+	var allMenus []models.MenuModel
+	m.db.Find(&allMenus)
+	for _, menu := range allMenus {
+		roleMenu := models.RoleMenu{
+			RoleID: adminRole.ID,
+			MenuID: menu.ID,
+		}
+		m.db.Create(&roleMenu)
 	}
 
 	// 创建默认管理员用户
-	adminUser := models.User{
+	adminUser := models.UserModel{
 		Username: "admin",
 		Email:    "admin@example.com",
 		Password: "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi", // password
@@ -125,6 +150,9 @@ func (m *Migrator) SeedData() error {
 	userRole := models.UserRole{
 		UserID: adminUser.ID,
 		RoleID: adminRole.ID,
+	}
+	if err := m.db.Create(&userRole).Error; err != nil {
+		return err
 	}
 	if err := m.db.Create(&userRole).Error; err != nil {
 		return err
@@ -153,18 +181,23 @@ func (m *Migrator) GetDatabaseInfo() map[string]interface{} {
 
 	// 获取用户数量
 	var userCount int64
-	m.db.Model(&models.User{}).Count(&userCount)
+	m.db.Model(&models.UserModel{}).Count(&userCount)
 	info["user_count"] = userCount
 
 	// 获取角色数量
 	var roleCount int64
-	m.db.Model(&models.Role{}).Count(&roleCount)
+	m.db.Model(&models.RoleModel{}).Count(&roleCount)
 	info["role_count"] = roleCount
 
-	// 获取权限数量
-	var permissionCount int64
-	m.db.Model(&models.Permission{}).Count(&permissionCount)
-	info["permission_count"] = permissionCount
+	// 获取菜单数量
+	var menuCount int64
+	m.db.Model(&models.MenuModel{}).Count(&menuCount)
+	info["menu_count"] = menuCount
+
+	// 获取API数量
+	var apiCount int64
+	m.db.Model(&models.ApiModel{}).Count(&apiCount)
+	info["api_count"] = apiCount
 
 	return info
 }

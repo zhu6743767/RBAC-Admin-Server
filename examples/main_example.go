@@ -44,7 +44,7 @@ func MainExample() {
 	}
 
 	// 6. 查询示例
-	var users []models.User
+	var users []models.UserModel
 	if err := db.Find(&users).Error; err != nil {
 		fmt.Printf("查询用户失败: %v\n", err)
 		return

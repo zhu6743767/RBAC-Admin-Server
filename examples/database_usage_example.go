@@ -46,7 +46,7 @@ func DatabaseUsageExample() {
 	}
 
 	// 6. 查询示例
-	var users []models.User
+	var users []models.UserModel
 	if err := db.Find(&users).Error; err != nil {
 		fmt.Printf("查询用户失败: %v\n", err)
 		return
@@ -58,7 +58,7 @@ func DatabaseUsageExample() {
 	}
 
 	// 7. 创建新用户示例
-	newUser := models.User{
+	newUser := models.UserModel{
 		Username: "test_user",
 		Email:    "test@example.com",
 		Password: "hashed_password",
@@ -143,7 +143,7 @@ func transactionExample(db *gorm.DB) {
 	}
 
 	// 在事务中执行操作
-	user := models.User{
+	user := models.UserModel{
 		Username: "transaction_user",
 		Email:    "transaction@example.com",
 		Password: "hashed_password",
@@ -156,7 +156,7 @@ func transactionExample(db *gorm.DB) {
 		return
 	}
 
-	role := models.Role{
+	role := models.RoleModel{
 		Name:        "transaction_role",
 		Description: "事务测试角色",
 		Status:      1,
@@ -180,8 +180,8 @@ func transactionExample(db *gorm.DB) {
 // 关联查询示例
 func associationExample(db *gorm.DB) {
 	// 预加载关联数据
-	var user models.User
-	if err := db.Preload("Roles").Preload("Roles.Permissions").First(&user, 1).Error; err != nil {
+	var user models.UserModel
+	if err := db.Preload("Roles").Preload("Roles.Menus").First(&user, 1).Error; err != nil {
 		fmt.Printf("查询用户关联数据失败: %v\n", err)
 		return
 	}
@@ -191,20 +191,20 @@ func associationExample(db *gorm.DB) {
 	
 	for _, role := range user.Roles {
 		fmt.Printf("  角色: %s - %s\n", role.Name, role.Description)
-		fmt.Printf("  权限数量: %d\n", len(role.Permissions))
-		for _, permission := range role.Permissions {
-			fmt.Printf("    权限: %s - %s\n", permission.Name, permission.Description)
+		fmt.Printf("  菜单数量: %d\n", len(role.Menus))
+		for _, menu := range role.Menus {
+			fmt.Printf("    菜单: %s - %s\n", menu.Name, menu.Title)
 		}
 	}
 }
 
 // 分页查询示例
 func paginationExample(db *gorm.DB) {
-	var users []models.User
+	var users []models.UserModel
 	var total int64
 
 	// 查询总数
-	db.Model(&models.User{}).Count(&total)
+	db.Model(&models.UserModel{}).Count(&total)
 
 	// 分页查询
 	page := 1
@@ -224,25 +224,25 @@ func paginationExample(db *gorm.DB) {
 
 // 复杂查询示例
 func complexQueryExample(db *gorm.DB) {
-	// 查询用户的角色和权限
+	// 查询用户的角色和菜单
 	var results []struct {
-		Username   string
-		RoleName   string
-		Permission string
+		Username string
+		RoleName string
+		MenuName string
 	}
 
-	db.Table("users u").
-		Select("u.username, r.name as role_name, p.name as permission").
-		Joins("JOIN user_roles ur ON u.id = ur.user_id").
-		Joins("JOIN roles r ON ur.role_id = r.id").
-		Joins("JOIN role_permissions rp ON r.id = rp.role_id").
-		Joins("JOIN permissions p ON rp.permission_id = p.id").
+	db.Table("sys_users u").
+		Select("u.username, r.name as role_name, m.name as menu_name").
+		Joins("JOIN sys_user_roles ur ON u.id = ur.user_id").
+		Joins("JOIN sys_roles r ON ur.role_id = r.id").
+		Joins("JOIN sys_role_menus rm ON r.id = rm.role_id").
+		Joins("JOIN sys_menus m ON rm.menu_id = m.id").
 		Where("u.status = ?", 1).
 		Where("r.status = ?", 1).
 		Scan(&results)
 
-	fmt.Println("用户-角色-权限关联查询结果:")
+	fmt.Println("用户-角色-菜单关联查询结果:")
 	for _, result := range results {
-		fmt.Printf("用户: %s, 角色: %s, 权限: %s\n", result.Username, result.RoleName, result.Permission)
+		fmt.Printf("用户: %s, 角色: %s, 菜单: %s\n", result.Username, result.RoleName, result.MenuName)
 	}
 }
