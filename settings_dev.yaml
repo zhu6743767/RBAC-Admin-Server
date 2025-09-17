@@ -2,33 +2,29 @@
 # 🏗️ RBAC管理员服务器 - 开发环境配置
 # =================================================================================
 # 📋 开发环境特性：
-#   - 调试模式启用，显示详细错误信息
-#   - 日志级别为debug，便于调试
-#   - 使用SQLite数据库，无需额外安装
-#   - CORS允许所有来源，便于前后端分离开发
-#   - Swagger文档启用，方便API测试
+#   - 使用内存SQLite数据库，无需安装数据库
+#   - 启用详细日志和调试信息
+#   - 禁用Redis，简化部署
+#   - 启用性能分析和Swagger文档
+#   - 宽松的安全策略，便于开发测试
+#   - 允许所有CORS来源，便于前端开发
 # =================================================================================
 
-# 服务器配置
-server:
-  port: 8080                    # 开发环境端口
-  mode: "debug"                # 开发模式：debug
-  read_timeout: 30s
-  write_timeout: 30s
-  shutdown_timeout: 30s
+# 系统配置
+system:
+  ip: 127.0.0.1                # 监听IP
+  port: 8080                   # 开发环境端口
 
-# 数据库配置 - 开发环境使用SQLite纯Go驱动
+# 数据库配置 - 开发环境使用内存SQLite，避免CGO依赖
 # 生产环境请切换到MySQL或PostgreSQL
-database:
-  type: "sqlite"                # 开发环境使用SQLite
+db:
+  mode: "sqlite"                # 开发环境使用SQLite
   host: "localhost"
-  port: 3306  # SQLite不需要端口，但验证需要非零值
-  username: ""
+  port: 3306                   # SQLite不需要端口，但验证需要非零值
+  user: ""
   password: ""
-  database: "rbac_admin_dev"
-  path: "./data/rbac_admin_dev.db"
-  charset: "utf8mb4"
-  driver: "sqlite"              # 使用纯Go SQLite驱动
+  dbname: "rbac_admin_dev"
+  path: ":memory:"              # 使用内存数据库，避免文件系统依赖
   max_open_conns: 10           # 开发环境连接数较少
   max_idle_conns: 5
   conn_max_lifetime: 1h
@@ -42,14 +38,11 @@ jwt:
   issuer: "rbac-admin-dev"     # 开发环境颁发者
   audience: "rbac-admin-dev"   # 开发环境受众
 
-# Redis配置 - 开发环境可选
+# Redis配置 - 开发环境禁用
 redis:
-  host: "localhost"
-  port: 6379
-  password: ""                  # 开发环境无密码
-  db: 1                         # 开发环境使用DB1
-  pool_size: 50
-  min_idle_conns: 5
+  addr: ""                      # 开发环境禁用Redis
+  password: ""
+  db: 0
 
 # 📝 日志配置 - 开发环境详细日志
 log:
@@ -88,8 +81,8 @@ monitoring:
   health_check_path: "/health"
   enable_metrics: true
   metrics_path: "/metrics"
-  enable_tracing: true         # 开发环境启用链路追踪
-  tracing_endpoint: "http://localhost:14268/api/traces"  # Jaeger本地地址
+  enable_tracing: false        # 开发环境禁用链路追踪
+  tracing_endpoint: ""
 
 # 🌐 CORS配置 - 开发环境允许所有来源
 cors:

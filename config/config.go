@@ -1,58 +1,48 @@
-// Package config 提供统一的配置结构定义
+// Package config 提供配置管理功能
 package config
 
 import (
 	"time"
 )
 
-// Config 全局配置结构体
-// 包含RBAC管理员服务器的所有配置信息
-// 通过YAML文件进行配置，支持热重载
-// 该结构体与settings.yaml文件完全对应
-// 修改后请确保settings.yaml格式同步更新
-
+// Config 主配置结构体
 type Config struct {
-	Server      ServerConfig      `yaml:"server"`      // 服务器配置
-	CORS        CORSConfig        `yaml:"cors"`        // CORS跨域配置
-	Database    DatabaseConfig    `yaml:"database"`    // 数据库配置
-	JWT         JWTConfig         `yaml:"jwt"`         // JWT配置
-	Redis       RedisConfig       `yaml:"redis"`       // Redis配置
-	Log         LogConfig         `yaml:"log"`         // 日志配置
-	Security    SecurityConfig    `yaml:"security"`    // 安全配置
-	Performance PerformanceConfig `yaml:"performance"` // 性能配置
-	Upload      UploadConfig      `yaml:"upload"`      // 文件上传配置
-	Monitoring  MonitoringConfig  `yaml:"monitoring"`  // 监控配置
-	Swagger     SwaggerConfig     `yaml:"swagger"`     // Swagger文档配置
-	App         AppConfig         `yaml:"app"`         // 应用配置
+	System      SystemConfig      `mapstructure:"system" json:"system" yaml:"system"`
+	DB          DBConfig          `mapstructure:"db" json:"db" yaml:"db"`
+	Redis       RedisConfig       `mapstructure:"redis" json:"redis" yaml:"redis"`
+	Log         LogConfig         `mapstructure:"log" json:"log" yaml:"log"`
+	JWT         JWTConfig         `mapstructure:"jwt" json:"jwt" yaml:"jwt"`
+	CORS        CORSConfig        `mapstructure:"cors" json:"cors" yaml:"cors"`
+	Security    SecurityConfig    `mapstructure:"security" json:"security" yaml:"security"`
+	Performance PerformanceConfig `mapstructure:"performance" json:"performance" yaml:"performance"`
+	Upload      UploadConfig      `mapstructure:"upload" json:"upload" yaml:"upload"`
+	Monitoring  MonitoringConfig  `mapstructure:"monitoring" json:"monitoring" yaml:"monitoring"`
+	Swagger     SwaggerConfig     `mapstructure:"swagger" json:"swagger" yaml:"swagger"`
+	App         AppConfig         `mapstructure:"app" json:"app" yaml:"app"`
 }
 
-// ServerConfig 服务器配置结构体
-type ServerConfig struct {
-	Port            int           `yaml:"port"`             // HTTP服务监听端口，默认8080
-	Mode            string        `yaml:"mode"`             // 运行模式: debug(开发)、release(生产)、test(测试)
-	ReadTimeout     time.Duration `yaml:"read_timeout"`     // 读取超时
-	WriteTimeout    time.Duration `yaml:"write_timeout"`    // 写入超时
-	ShutdownTimeout time.Duration `yaml:"shutdown_timeout"` // 优雅关闭超时
+// SystemConfig 系统配置结构体
+type SystemConfig struct {
+	IP   string `mapstructure:"ip" json:"ip" yaml:"ip"`     // 监听IP
+	Port int    `mapstructure:"port" json:"port" yaml:"port"` // HTTP服务监听端口，默认8080
 }
 
-// DatabaseConfig 数据库配置结构体
-type DatabaseConfig struct {
-	Type            string        `yaml:"type"`              // 数据库类型: mysql, postgres, sqlite, sqlserver
-	Driver          string        `yaml:"driver"`            // 数据库驱动（可选，按Type自动推导）
-	Host            string        `yaml:"host"`              // 数据库服务器地址
-	Port            int           `yaml:"port"`              // 数据库端口，MySQL默认3306
-	Username        string        `yaml:"username"`          // 数据库用户名
-	Password        string        `yaml:"password"`          // 数据库密码（建议使用环境变量）
-	Database        string        `yaml:"database"`          // 数据库名称
-	Path            string        `yaml:"path"`              // SQLite专用路径
-	Charset         string        `yaml:"charset"`           // 字符集，推荐utf8mb4支持emoji
-	Collation       string        `yaml:"collation"`         // 排序规则
-	MaxOpenConns    int           `yaml:"max_open_conns"`    // 最大连接数，防止连接耗尽
-	MaxIdleConns    int           `yaml:"max_idle_conns"`    // 空闲连接数，提高响应速度
-	ConnMaxLifetime time.Duration `yaml:"conn_max_lifetime"` // 连接生命周期
-	ConnMaxIdleTime time.Duration `yaml:"conn_max_idle_time"`// 空闲连接超时
-	SSLMode         string        `yaml:"ssl_mode"`          // SSL模式
-	Timeout         string        `yaml:"timeout"`           // 连接超时
+// DBConfig 数据库配置结构体
+type DBConfig struct {
+	Mode            string        `mapstructure:"mode" json:"mode" yaml:"mode"`                        // 数据库类型: mysql, postgres, sqlite, sqlserver
+	Driver          string        `mapstructure:"driver" json:"driver" yaml:"driver"`                  // 数据库驱动（可选，按Mode自动推导）
+	Host            string        `mapstructure:"host" json:"host" yaml:"host"`                        // 数据库服务器地址
+	Port            int           `mapstructure:"port" json:"port" yaml:"port"`                          // 数据库端口，MySQL默认3306
+	User            string        `mapstructure:"user" json:"user" yaml:"user"`                          // 数据库用户名
+	PASSWORD        string        `mapstructure:"password" json:"password" yaml:"password"`              // 数据库密码（建议使用环境变量）
+	DbNAME          string        `mapstructure:"dbname" json:"dbname" yaml:"dbname"`                  // 数据库名称
+	Path            string        `mapstructure:"path" json:"path" yaml:"path"`                          // SQLite专用路径
+	MaxOpenConns    int           `mapstructure:"max_open_conns" json:"max_open_conns" yaml:"max_open_conns"`    // 最大连接数，防止连接耗尽
+	MaxIdleConns    int           `mapstructure:"max_idle_conns" json:"max_idle_conns" yaml:"max_idle_conns"`    // 空闲连接数，提高响应速度
+	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime" json:"conn_max_lifetime" yaml:"conn_max_lifetime"` // 连接生命周期
+	ConnMaxIdleTime time.Duration `mapstructure:"conn_max_idle_time" json:"conn_max_idle_time" yaml:"conn_max_idle_time"` // 空闲连接超时
+	SSLMode         string        `mapstructure:"ssl_mode" json:"ssl_mode" yaml:"ssl_mode"`              // SSL模式
+	Timeout         string        `mapstructure:"timeout" json:"timeout" yaml:"timeout"`                  // 连接超时
 }
 
 // JWTConfig JWT配置结构体
@@ -66,33 +56,23 @@ type JWTConfig struct {
 
 // RedisConfig Redis配置结构体
 type RedisConfig struct {
-	Host         string        `yaml:"host"`                // Redis服务器地址
-	Port         int           `yaml:"port"`                // Redis端口，默认6379
-	Password     string        `yaml:"password"`            // Redis密码（如果没有密码留空）
-	DB           int           `yaml:"db"`                  // 数据库编号，0-15
-	MaxRetries   int           `yaml:"max_retries"`         // 最大重试次数
-	PoolSize     int           `yaml:"pool_size"`           // 连接池大小
-	MinIdleConns int           `yaml:"min_idle_conns"`      // 最小空闲连接数
-	MaxConnAge   time.Duration `yaml:"max_conn_age"`        // 连接最大生命周期
-	DialTimeout  time.Duration `yaml:"dial_timeout"`        // 连接超时
-	ReadTimeout  time.Duration `yaml:"read_timeout"`        // 读取超时
-	WriteTimeout time.Duration `yaml:"write_timeout"`       // 写入超时
+	Addr     string `mapstructure:"addr" json:"addr" yaml:"addr"`         // Redis地址，格式 host:port
+	Password string `mapstructure:"password" json:"password" yaml:"password"` // Redis密码（如果没有密码留空）
+	DB       int    `mapstructure:"db" json:"db" yaml:"db"`                 // 数据库编号，0-15
 }
 
 // LogConfig 日志配置结构体
 type LogConfig struct {
-	Type         string `yaml:"type"`           // 日志类型: logrus, zap, zerolog (默认logrus)
-	Level        string `yaml:"level"`          // 日志级别: debug, info, warn, error
-	Format       string `yaml:"format"`         // 日志格式: json(结构化), text(可读性)
-	Output       string `yaml:"output"`         // 输出位置: stdout(控制台), file(文件), both(两者)
-	LogDir       string `yaml:"log_dir"`        // 日志根目录
-	MaxSize      int    `yaml:"max_size"`       // 日志文件最大大小(MB)
-	MaxAge       int    `yaml:"max_age"`        // 日志文件最大保留天数
-	MaxBackups   int    `yaml:"max_backups"`    // 日志文件最大备份数
-	Compress     bool   `yaml:"compress"`       // 是否压缩旧日志
-	LocalTime    bool   `yaml:"local_time"`     // 是否使用本地时间
-	EnableCaller bool   `yaml:"enable_caller"`  // 记录调用者信息
-	EnableTrace  bool   `yaml:"enable_trace"`   // 记录堆栈跟踪
+	Level        string `mapstructure:"level" json:"level" yaml:"level"`
+	Format       string `mapstructure:"format" json:"format" yaml:"format"`
+	Output       string `mapstructure:"output" json:"output" yaml:"output"`
+	LogDir       string `mapstructure:"log_dir" json:"log_dir" yaml:"log_dir"`
+	MaxSize      int    `mapstructure:"max_size" json:"max_size" yaml:"max_size"`
+	MaxBackups   int    `mapstructure:"max_backups" json:"max_backups" yaml:"max_backups"`
+	MaxAge       int    `mapstructure:"max_age" json:"max_age" yaml:"max_age"`
+	Compress     bool   `mapstructure:"compress" json:"compress" yaml:"compress"`
+	EnableCaller bool   `mapstructure:"enable_caller" json:"enable_caller" yaml:"enable_caller"`
+	EnableTrace  bool   `mapstructure:"enable_trace" json:"enable_trace" yaml:"enable_trace"`
 }
 
 // SecurityConfig 安全配置结构体
@@ -169,58 +149,35 @@ type AppConfig struct {
 // DefaultConfig 返回默认配置
 func DefaultConfig() *Config {
 	return &Config{
-		Server: ServerConfig{
-			Port:            8080,
-			Mode:            "debug",
-			ReadTimeout:     30 * time.Second,
-			WriteTimeout:    30 * time.Second,
-			ShutdownTimeout: 30 * time.Second,
+		System: SystemConfig{
+			IP:   "127.0.0.1",
+			Port: 8080,
 		},
-		Database: DatabaseConfig{
-			Type:            "sqlite",
+		DB: DBConfig{
+			Mode:            "sqlite",
 			Host:            "localhost",
 			Port:            3306,
-			Database:        "rbac_admin",
-			Username:        "root",
-			Password:        "",
-			Charset:         "utf8mb4",
-			SSLMode:         "disable",
+			User:            "root",
+			PASSWORD:        "",
+			DbNAME:          "rbac_admin",
 			MaxOpenConns:    100,
 			MaxIdleConns:    10,
-			ConnMaxLifetime: 3600 * time.Second,
-			ConnMaxIdleTime: 300 * time.Second,
+			ConnMaxLifetime: 1 * time.Hour,
+			ConnMaxIdleTime: 30 * time.Minute,
+			SSLMode:         "disable",
+			Timeout:         "30s",
 		},
 		Redis: RedisConfig{
-			Host:         "localhost",
-			Port:         6379,
-			Password:     "",
-			DB:           0,
-			PoolSize:     100,
-			MinIdleConns: 10,
-			DialTimeout:  5 * time.Second,
-			ReadTimeout:  3 * time.Second,
-			WriteTimeout: 3 * time.Second,
-		},
-		Log: LogConfig{
-			Type:         "logrus",
-			Level:        "info",
-			Format:       "json",
-			Output:       "both",
-			LogDir:       "logs",
-			MaxSize:      100,
-			MaxAge:       7,
-			MaxBackups:   10,
-			Compress:     true,
-			LocalTime:    true,
-			EnableCaller: true,
-			EnableTrace:  false,
+			Addr:     "localhost:6379",
+			Password: "",
+			DB:       0,
 		},
 		JWT: JWTConfig{
-			Secret:             "your-secret-key-change-this",
+			Secret:             "your-jwt-secret-key-here",
 			ExpireHours:        24,
 			RefreshExpireHours: 168,
-			Issuer:             "rbac-admin",
-			Audience:           "rbac-admin",
+			Issuer:             "rbac-admin-server",
+			Audience:           "rbac-client",
 		},
 		Security: SecurityConfig{
 			BcryptCost:          10,
@@ -233,28 +190,40 @@ func DefaultConfig() *Config {
 		},
 		CORS: CORSConfig{
 			Enable:           true,
-			AllowOrigins:     []string{"*"},
+			AllowOrigins:     []string{"http://localhost:3000", "http://localhost:8080"},
 			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-			AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
-			ExposeHeaders:    []string{"Content-Length", "Content-Type"},
+			AllowHeaders:     []string{"Authorization", "Content-Type", "X-Requested-With"},
+			ExposeHeaders:    []string{"X-Total-Count"},
 			AllowCredentials: true,
 			MaxAge:           12 * time.Hour,
 		},
+		Log: LogConfig{
+			Level:        "info",
+			Format:       "text",
+			Output:       "both",
+			LogDir:       "./logs",
+			MaxSize:      100,
+			MaxBackups:   3,
+			MaxAge:       7,
+			Compress:     true,
+			EnableCaller: true,
+			EnableTrace:  false,
+		},
 		Performance: PerformanceConfig{
 			EnablePprof:        false,
-			MaxUploadSize:      "32MB",
+			MaxUploadSize:      "10MB",
 			RequestRateLimit:   100,
-			BurstRateLimit:     50,
+			BurstRateLimit:     200,
 			EnableCompression:  true,
 			CompressionLevel:   6,
 		},
 		Upload: UploadConfig{
-			MaxFileSize:        "10MB",
-			AllowedExtensions:  []string{"jpg", "jpeg", "png", "gif", "pdf", "doc", "docx"},
-			AllowedMimeTypes:   []string{"image/jpeg", "image/png", "image/gif", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
-			StorageType:        "local",
-			StoragePath:        "./uploads",
-			MaxFilesPerRequest: 5,
+			MaxFileSize:         "10MB",
+			AllowedExtensions:   []string{".jpg", ".jpeg", ".png", ".gif", ".pdf"},
+			AllowedMimeTypes:    []string{"image/jpeg", "image/png", "image/gif", "application/pdf"},
+			StorageType:         "local",
+			StoragePath:         "./uploads",
+			MaxFilesPerRequest:  5,
 		},
 		Monitoring: MonitoringConfig{
 			EnableHealthCheck: true,
@@ -266,15 +235,15 @@ func DefaultConfig() *Config {
 		},
 		Swagger: SwaggerConfig{
 			Enable:      true,
-			Title:       "RBAC Admin API",
-			Description: "基于角色的访问控制管理员系统API文档",
+			Title:       "RBAC管理员API",
+			Description: "企业级RBAC权限管理API",
 			Version:     "1.0.0",
 			Host:        "localhost:8080",
 			BasePath:    "/api/v1",
 			EnableUI:    true,
 		},
 		App: AppConfig{
-			Name:        "RBAC管理员",
+			Name:        "RBAC管理员服务器",
 			Version:     "1.0.0",
 			Environment: "development",
 			Debug:       true,

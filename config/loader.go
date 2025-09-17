@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,6 +25,9 @@ func parseDuration(s string) time.Duration {
 
 // Load 从指定文件加载配置
 func Load(filename string) (*Config, error) {
+	// 首先尝试加载 .env 文件
+	_ = godotenv.Load()
+
 	// 读取配置文件
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -99,42 +103,34 @@ func getEnvFromFile(key string) string {
 
 // applyDefaults 应用默认值
 func applyDefaults(cfg *Config) {
-	if cfg.Server.Port == 0 {
-		cfg.Server.Port = 8080
+	if cfg.System.Port == 0 {
+		cfg.System.Port = 8080
 	}
-	if cfg.Server.Mode == "" {
-		cfg.Server.Mode = "debug"
-	}
-	if cfg.Server.ReadTimeout == 0 {
-		cfg.Server.ReadTimeout = 30 * time.Second
-	}
-	if cfg.Server.WriteTimeout == 0 {
-		cfg.Server.WriteTimeout = 30 * time.Second
-	}
-	if cfg.Server.ShutdownTimeout == 0 {
-		cfg.Server.ShutdownTimeout = 30 * time.Second
+	if cfg.System.IP == "" {
+		cfg.System.IP = "127.0.0.1"
 	}
 
-	if cfg.Database.Type == "" {
-		cfg.Database.Type = "sqlite"
+	if cfg.DB.Mode == "" {
+		cfg.DB.Mode = "sqlite"
 	}
-	if cfg.Database.Port == 0 {
-		cfg.Database.Port = 3306
+	if cfg.DB.Port == 0 {
+		cfg.DB.Port = 3306
 	}
-	if cfg.Database.Charset == "" {
-		cfg.Database.Charset = "utf8mb4"
+	if cfg.DB.MaxOpenConns == 0 {
+		cfg.DB.MaxOpenConns = 100
 	}
-	if cfg.Database.MaxOpenConns == 0 {
-		cfg.Database.MaxOpenConns = 10
+	if cfg.DB.MaxIdleConns == 0 {
+		cfg.DB.MaxIdleConns = 10
 	}
-	if cfg.Database.MaxIdleConns == 0 {
-		cfg.Database.MaxIdleConns = 5
+	if cfg.DB.ConnMaxLifetime == 0 {
+		cfg.DB.ConnMaxLifetime = 1 * time.Hour
 	}
-	if cfg.Database.ConnMaxLifetime == 0 {
-		cfg.Database.ConnMaxLifetime = 1 * time.Hour
+	if cfg.DB.ConnMaxIdleTime == 0 {
+		cfg.DB.ConnMaxIdleTime = 30 * time.Minute
 	}
-	if cfg.Database.ConnMaxIdleTime == 0 {
-		cfg.Database.ConnMaxIdleTime = 30 * time.Minute
+
+	if cfg.DB.Timeout == "" {
+		cfg.DB.Timeout = "30s"
 	}
 
 	if cfg.JWT.ExpireHours == 0 {
@@ -144,24 +140,13 @@ func applyDefaults(cfg *Config) {
 		cfg.JWT.RefreshExpireHours = 168
 	}
 	if cfg.JWT.Issuer == "" {
-		cfg.JWT.Issuer = "rbac-admin"
+		cfg.JWT.Issuer = "rbac-admin-server"
 	}
 	if cfg.JWT.Audience == "" {
-		cfg.JWT.Audience = "rbac-admin"
+		cfg.JWT.Audience = "rbac-client"
 	}
 
-	if cfg.Redis.Host == "" {
-		cfg.Redis.Host = "localhost"
-	}
-	if cfg.Redis.Port == 0 {
-		cfg.Redis.Port = 6379
-	}
-	if cfg.Redis.PoolSize == 0 {
-		cfg.Redis.PoolSize = 50
-	}
-	if cfg.Redis.MinIdleConns == 0 {
-		cfg.Redis.MinIdleConns = 5
-	}
+	// Redis配置可选，不设置默认值
 
 	if cfg.Log.Level == "" {
 		cfg.Log.Level = "info"
@@ -170,13 +155,13 @@ func applyDefaults(cfg *Config) {
 		cfg.Log.Format = "text"
 	}
 	if cfg.Log.Output == "" {
-		cfg.Log.Output = "console"
+		cfg.Log.Output = "both"
 	}
 	if cfg.Log.LogDir == "" {
 		cfg.Log.LogDir = "./logs"
 	}
 	if cfg.Log.MaxSize == 0 {
-		cfg.Log.MaxSize = 10
+		cfg.Log.MaxSize = 100
 	}
 	if cfg.Log.MaxAge == 0 {
 		cfg.Log.MaxAge = 7
@@ -264,7 +249,7 @@ func applyDefaults(cfg *Config) {
 
 // validateConfig 验证配置有效性
 func validateConfig(cfg *Config) error {
-	if cfg.Server.Port <= 0 || cfg.Server.Port > 65535 {
+	if cfg.System.Port <= 0 || cfg.System.Port > 65535 {
 		return fmt.Errorf("服务器端口必须在1-65535之间")
 	}
 
@@ -272,15 +257,15 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("JWT密钥不能为空")
 	}
 
-	if cfg.Database.Type == "" {
+	if cfg.DB.Mode == "" {
 		return fmt.Errorf("数据库类型不能为空")
 	}
 
-	if cfg.Database.Type == "sqlite" && cfg.Database.Path == "" {
-		return fmt.Errorf("SQLite数据库路径不能为空")
+	if cfg.DB.Mode == "sqlite" && cfg.DB.Path == "" {
+		cfg.DB.Path = ":memory:"
 	}
 
-	if cfg.Database.Type != "sqlite" && cfg.Database.Host == "" {
+	if cfg.DB.Mode != "sqlite" && cfg.DB.Host == "" {
 		return fmt.Errorf("数据库主机不能为空")
 	}
 
@@ -289,39 +274,45 @@ func validateConfig(cfg *Config) error {
 
 // applyEnvironmentVariables 应用环境变量到配置
 func applyEnvironmentVariables(cfg *Config) {
-	// 服务器配置
-	if port := os.Getenv("SERVER_PORT"); port != "" {
-		if p, err := strconv.Atoi(port); err == nil {
-			cfg.Server.Port = p
-		}
+	// 系统配置
+	if ip := os.Getenv("SYSTEM_IP"); ip != "" {
+		cfg.System.IP = ip
 	}
-	if mode := os.Getenv("SERVER_MODE"); mode != "" {
-		cfg.Server.Mode = mode
+	if port := os.Getenv("SYSTEM_PORT"); port != "" {
+		if p, err := strconv.Atoi(port); err == nil {
+			cfg.System.Port = p
+		}
 	}
 
 	// 数据库配置
-	if dbType := os.Getenv("DB_TYPE"); dbType != "" {
-		cfg.Database.Type = dbType
+	if dbMode := os.Getenv("DB_MODE"); dbMode != "" {
+		cfg.DB.Mode = dbMode
 	}
 	if host := os.Getenv("DB_HOST"); host != "" {
-		cfg.Database.Host = host
+		cfg.DB.Host = host
 	}
 	if port := os.Getenv("DB_PORT"); port != "" {
 		if p, err := strconv.Atoi(port); err == nil {
-			cfg.Database.Port = p
+			cfg.DB.Port = p
 		}
 	}
 	if username := os.Getenv("DB_USERNAME"); username != "" {
-		cfg.Database.Username = username
+		cfg.DB.User = username
+	}
+	if user := os.Getenv("DB_USER"); user != "" {
+		cfg.DB.User = user
 	}
 	if password := os.Getenv("DB_PASSWORD"); password != "" {
-		cfg.Database.Password = password
+		cfg.DB.PASSWORD = password
 	}
 	if dbName := os.Getenv("DB_NAME"); dbName != "" {
-		cfg.Database.Database = dbName
+		cfg.DB.DbNAME = dbName
+	}
+	if dbname := os.Getenv("DB_DBNAME"); dbname != "" {
+		cfg.DB.DbNAME = dbname
 	}
 	if path := os.Getenv("DB_PATH"); path != "" {
-		cfg.Database.Path = path
+		cfg.DB.Path = path
 	}
 
 	// JWT配置
@@ -346,13 +337,8 @@ func applyEnvironmentVariables(cfg *Config) {
 	}
 
 	// Redis配置
-	if host := os.Getenv("REDIS_HOST"); host != "" {
-		cfg.Redis.Host = host
-	}
-	if port := os.Getenv("REDIS_PORT"); port != "" {
-		if p, err := strconv.Atoi(port); err == nil {
-			cfg.Redis.Port = p
-		}
+	if addr := os.Getenv("REDIS_ADDR"); addr != "" {
+		cfg.Redis.Addr = addr
 	}
 	if password := os.Getenv("REDIS_PASSWORD"); password != "" {
 		cfg.Redis.Password = password
