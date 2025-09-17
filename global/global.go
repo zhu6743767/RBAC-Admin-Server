@@ -1,7 +1,7 @@
 package global
 
 import (
-	"github.com/bytedance/gopkg/util/logger"
+	"github.com/sirupsen/logrus"
 	"rbac.admin/config"
 )
 
@@ -13,7 +13,7 @@ var Config *config.Config
 // Logger 全局日志实例
 // 通过global.Logger可以访问统一的日志系统
 // 支持按时间、大小、等级分片
-var Logger logger.Logger
+var Logger *logrus.Logger
 
 // ConfigManager 全局配置管理器实例
 // 提供配置热重载和回写功能
@@ -26,4 +26,4 @@ var ConfigManager interface {
 }
 
 // DBManager 全局数据库管理器
-var DBManager *database.DatabaseManager
+var DBManager interface{}
