@@ -1,9 +1,8 @@
 package global
 
 import (
+	"github.com/bytedance/gopkg/util/logger"
 	"rbac.admin/config"
-	"rbac.admin/core/logger"
-	"rbac.admin/database"
 )
 
 // Config 全局配置实例

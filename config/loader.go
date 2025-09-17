@@ -1,283 +1,375 @@
+// Package config 提供配置加载和环境变量解析功能
 package config
 
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
 
-// Load 从配置文件加载配置，支持环境变量替换
-// 如果配置文件不存在，则创建默认配置
-func Load(configPath string) (*Config, error) {
-	// 确保配置文件路径是绝对路径
-	absPath, err := filepath.Abs(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("获取配置文件绝对路径失败: %w", err)
+// parseDuration 解析时间字符串为time.Duration
+func parseDuration(s string) time.Duration {
+	if s == "" {
+		return 0
 	}
+	if d, err := time.ParseDuration(s); err == nil {
+		return d
+	}
+	return 0
+}
 
-	// 检查配置文件是否存在
-	if _, err := os.Stat(absPath); os.IsNotExist(err) {
-		// 创建默认配置文件
-		fmt.Printf("配置文件 %s 不存在，创建默认配置...\n", absPath)
-		defaultConfig := DefaultConfig()
-		if err := Save(absPath, defaultConfig); err != nil {
-			return nil, fmt.Errorf("创建默认配置文件失败: %w", err)
-		}
-		return defaultConfig, nil
-	}
+// Load 从指定文件加载配置
+func Load(filename string) (*Config, error) {
+	// 首先尝试加载 .env 文件
+	_ = godotenv.Load()
 
 	// 读取配置文件
-	data, err := os.ReadFile(absPath)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("读取配置文件失败: %w", err)
 	}
 
-	// 替换环境变量
-	configStr := replaceEnvVars(string(data))
+	// 替换环境变量占位符
+	content := string(data)
+	content = replaceEnvVars(content)
 
-	// 解析配置
+	// 解析YAML配置
 	var cfg Config
-	if err := yaml.Unmarshal([]byte(configStr), &cfg); err != nil {
+	if err := yaml.Unmarshal([]byte(content), &cfg); err != nil {
 		return nil, fmt.Errorf("解析配置文件失败: %w", err)
 	}
 
+	// 应用环境变量
+	applyEnvironmentVariables(&cfg)
+
+	// 应用默认值
+	applyDefaults(&cfg)
+
 	// 验证配置
-	if err := Validate(&cfg); err != nil {
+	if err := validateConfig(&cfg); err != nil {
 		return nil, fmt.Errorf("配置验证失败: %w", err)
 	}
 
 	return &cfg, nil
 }
 
-// Save 保存配置到文件
-func Save(configPath string, config *Config) error {
-	// 确保目录存在
-	absPath, err := filepath.Abs(configPath)
-	if err != nil {
-		return fmt.Errorf("获取配置文件绝对路径失败: %w", err)
-	}
-
-	// 创建目录（如果不存在）
-	dir := filepath.Dir(absPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("创建目录失败: %w", err)
-	}
-
-	// 序列化配置
-	data, err := yaml.Marshal(config)
-	if err != nil {
-		return fmt.Errorf("序列化配置失败: %w", err)
-	}
-
-	// 写入文件
-	if err := os.WriteFile(absPath, data, 0644); err != nil {
-		return fmt.Errorf("写入配置文件失败: %w", err)
-	}
-
-	return nil
-}
-
-// Validate 验证配置的有效性
-func Validate(config *Config) error {
-	return validateAll(config)
-}
-
-// replaceEnvVars 替换字符串中的环境变量
-func replaceEnvVars(str string) string {
-	return os.Expand(str, func(key string) string {
-		if value, exists := os.LookupEnv(key); exists {
-			return value
+// replaceEnvVars 替换配置文件中的环境变量占位符
+func replaceEnvVars(content string) string {
+	// 替换 ${VAR_NAME} 格式的环境变量
+	for {
+		start := strings.Index(content, "${")
+		if start == -1 {
+			break
 		}
-		// 支持默认值，格式: ${VAR:-default}
-		if strings.Contains(key, ":-") {
-			parts := strings.SplitN(key, ":-", 2)
-			if len(parts) == 2 {
-				if value, exists := os.LookupEnv(parts[0]); exists {
-					return value
+		end := strings.Index(content[start:], "}")
+		if end == -1 {
+			break
+		}
+		fullMatch := content[start : start+end+1]
+		varName := content[start+2 : start+end]
+		// 获取环境变量值，如果不存在则使用默认值
+		value := os.Getenv(varName)
+		if value == "" {
+			// 尝试从 .env 文件加载
+			value = getEnvFromFile(varName)
+		}
+		content = strings.ReplaceAll(content, fullMatch, value)
+	}
+	return content
+}
+
+// getEnvFromFile 从 .env 文件获取环境变量
+func getEnvFromFile(key string) string {
+	// 简单的 .env 文件解析
+	if _, err := os.Stat(".env"); err == nil {
+		data, _ := os.ReadFile(".env")
+		lines := strings.Split(string(data), "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "=") {
+				parts := strings.SplitN(line, "=", 2)
+				if len(parts) == 2 && strings.TrimSpace(parts[0]) == key {
+					return strings.TrimSpace(parts[1])
 				}
-				return parts[1]
 			}
 		}
-		return ""
-	})
+	}
+	return ""
 }
 
-// validateAll 执行所有验证
-func validateAll(config *Config) error {
-	if err := validateServer(config.Server); err != nil {
-		return fmt.Errorf("服务器配置错误: %w", err)
+// applyDefaults 应用默认值
+func applyDefaults(cfg *Config) {
+	if cfg.System.Port == 0 {
+		cfg.System.Port = 8080
 	}
-	if err := validateDatabase(config.Database); err != nil {
-		return fmt.Errorf("数据库配置错误: %w", err)
+	if cfg.System.IP == "" {
+		cfg.System.IP = "127.0.0.1"
 	}
-	if err := validateJWT(config.JWT); err != nil {
-		return fmt.Errorf("JWT配置错误: %w", err)
+
+	if cfg.DB.Mode == "" {
+		cfg.DB.Mode = "sqlite"
 	}
-	if err := validateRedis(config.Redis); err != nil {
-		return fmt.Errorf("Redis配置错误: %w", err)
+	if cfg.DB.Port == 0 {
+		cfg.DB.Port = 3306
 	}
-	if err := validateLog(config.Log); err != nil {
-		return fmt.Errorf("日志配置错误: %w", err)
+	if cfg.DB.MaxOpenConns == 0 {
+		cfg.DB.MaxOpenConns = 100
 	}
-	if err := validateSecurity(config.Security); err != nil {
-		return fmt.Errorf("安全配置错误: %w", err)
+	if cfg.DB.MaxIdleConns == 0 {
+		cfg.DB.MaxIdleConns = 10
 	}
-	if err := validateCORS(config.CORS); err != nil {
-		return fmt.Errorf("CORS配置错误: %w", err)
+	if cfg.DB.ConnMaxLifetime == 0 {
+		cfg.DB.ConnMaxLifetime = 1 * time.Hour
 	}
-	if err := validatePerformance(config.Performance); err != nil {
-		return fmt.Errorf("性能配置错误: %w", err)
+	if cfg.DB.ConnMaxIdleTime == 0 {
+		cfg.DB.ConnMaxIdleTime = 30 * time.Minute
 	}
-	if err := validateUpload(config.Upload); err != nil {
-		return fmt.Errorf("上传配置错误: %w", err)
+
+	if cfg.DB.Timeout == "" {
+		cfg.DB.Timeout = "30s"
 	}
-	if err := validateMonitoring(config.Monitoring); err != nil {
-		return fmt.Errorf("监控配置错误: %w", err)
+
+	if cfg.JWT.ExpireHours == 0 {
+		cfg.JWT.ExpireHours = 24
 	}
-	if err := validateSwagger(config.Swagger); err != nil {
-		return fmt.Errorf("Swagger配置错误: %w", err)
+	if cfg.JWT.RefreshExpireHours == 0 {
+		cfg.JWT.RefreshExpireHours = 168
+	}
+	if cfg.JWT.Issuer == "" {
+		cfg.JWT.Issuer = "rbac-admin-server"
+	}
+	if cfg.JWT.Audience == "" {
+		cfg.JWT.Audience = "rbac-client"
+	}
+
+	// Redis配置可选，不设置默认值
+
+	if cfg.Log.Level == "" {
+		cfg.Log.Level = "info"
+	}
+	if cfg.Log.Format == "" {
+		cfg.Log.Format = "text"
+	}
+	if cfg.Log.Output == "" {
+		cfg.Log.Output = "both"
+	}
+	if cfg.Log.LogDir == "" {
+		cfg.Log.LogDir = "./logs"
+	}
+	if cfg.Log.MaxSize == 0 {
+		cfg.Log.MaxSize = 100
+	}
+	if cfg.Log.MaxAge == 0 {
+		cfg.Log.MaxAge = 7
+	}
+	if cfg.Log.MaxBackups == 0 {
+		cfg.Log.MaxBackups = 3
+	}
+
+	if cfg.Performance.MaxUploadSize == "" {
+		cfg.Performance.MaxUploadSize = "10MB"
+	}
+	if cfg.Performance.RequestRateLimit == 0 {
+		cfg.Performance.RequestRateLimit = 100
+	}
+	if cfg.Performance.BurstRateLimit == 0 {
+		cfg.Performance.BurstRateLimit = 200
+	}
+	if cfg.Performance.CompressionLevel == 0 {
+		cfg.Performance.CompressionLevel = 6
+	}
+
+	if cfg.Upload.MaxFileSize == "" {
+		cfg.Upload.MaxFileSize = "10MB"
+	}
+	if cfg.Upload.StorageType == "" {
+		cfg.Upload.StorageType = "local"
+	}
+	if cfg.Upload.StoragePath == "" {
+		cfg.Upload.StoragePath = "./uploads"
+	}
+	if cfg.Upload.MaxFilesPerRequest == 0 {
+		cfg.Upload.MaxFilesPerRequest = 5
+	}
+
+	if cfg.Monitoring.HealthCheckPath == "" {
+		cfg.Monitoring.HealthCheckPath = "/health"
+	}
+	if cfg.Monitoring.MetricsPath == "" {
+		cfg.Monitoring.MetricsPath = "/metrics"
+	}
+
+	if cfg.CORS.MaxAge == 0 {
+		cfg.CORS.MaxAge = 12 * time.Hour
+	}
+
+	if cfg.Security.BcryptCost == 0 {
+		cfg.Security.BcryptCost = 10
+	}
+	if cfg.Security.MaxLoginAttempts == 0 {
+		cfg.Security.MaxLoginAttempts = 5
+	}
+	if cfg.Security.LockDurationMinutes == 0 {
+		cfg.Security.LockDurationMinutes = 30
+	}
+	if cfg.Security.SessionTimeout == 0 {
+		cfg.Security.SessionTimeout = 2 * time.Hour
+	}
+	if cfg.Security.APIKeyHeader == "" {
+		cfg.Security.APIKeyHeader = "X-API-Key"
+	}
+
+	if cfg.Swagger.Title == "" {
+		cfg.Swagger.Title = "RBAC管理员API"
+	}
+	if cfg.Swagger.Version == "" {
+		cfg.Swagger.Version = "1.0.0"
+	}
+	if cfg.Swagger.Host == "" {
+		cfg.Swagger.Host = "localhost:8080"
+	}
+	if cfg.Swagger.BasePath == "" {
+		cfg.Swagger.BasePath = "/api/v1"
+	}
+
+	if cfg.App.Name == "" {
+		cfg.App.Name = "RBAC管理员"
+	}
+	if cfg.App.Version == "" {
+		cfg.App.Version = "1.0.0"
+	}
+	if cfg.App.Environment == "" {
+		cfg.App.Environment = "development"
+	}
+}
+
+// validateConfig 验证配置有效性
+func validateConfig(cfg *Config) error {
+	if cfg.System.Port <= 0 || cfg.System.Port > 65535 {
+		return fmt.Errorf("服务器端口必须在1-65535之间")
+	}
+
+	if cfg.JWT.Secret == "" {
+		return fmt.Errorf("JWT密钥不能为空")
+	}
+
+	if cfg.DB.Mode == "" {
+		return fmt.Errorf("数据库类型不能为空")
+	}
+
+	if cfg.DB.Mode == "sqlite" && cfg.DB.Path == "" {
+		cfg.DB.Path = ":memory:"
+	}
+
+	if cfg.DB.Mode != "sqlite" && cfg.DB.Host == "" {
+		return fmt.Errorf("数据库主机不能为空")
 	}
 
 	return nil
 }
 
-func validateServer(server ServerConfig) error {
-	if server.Port <= 0 || server.Port > 65535 {
-		return fmt.Errorf("端口必须在1-65535之间")
+// applyEnvironmentVariables 应用环境变量到配置
+func applyEnvironmentVariables(cfg *Config) {
+	// 系统配置
+	if ip := os.Getenv("SYSTEM_IP"); ip != "" {
+		cfg.System.IP = ip
 	}
-	if server.ReadTimeout <= 0 {
-		return fmt.Errorf("读取超时必须大于0")
+	if port := os.Getenv("SYSTEM_PORT"); port != "" {
+		if p, err := strconv.Atoi(port); err == nil {
+			cfg.System.Port = p
+		}
 	}
-	if server.WriteTimeout <= 0 {
-		return fmt.Errorf("写入超时必须大于0")
-	}
-	if server.ShutdownTimeout <= 0 {
-		return fmt.Errorf("关闭超时必须大于0")
-	}
-	return nil
-}
 
-func validateDatabase(db DatabaseConfig) error {
-	if db.Host == "" {
-		return fmt.Errorf("主机不能为空")
+	// 数据库配置
+	if dbMode := os.Getenv("DB_MODE"); dbMode != "" {
+		cfg.DB.Mode = dbMode
 	}
-	if db.Port <= 0 || db.Port > 65535 {
-		return fmt.Errorf("端口必须在1-65535之间")
+	if host := os.Getenv("DB_HOST"); host != "" {
+		cfg.DB.Host = host
 	}
-	if db.Database == "" {
-		return fmt.Errorf("数据库名称不能为空")
+	if port := os.Getenv("DB_PORT"); port != "" {
+		if p, err := strconv.Atoi(port); err == nil {
+			cfg.DB.Port = p
+		}
 	}
-	if db.MaxIdleConns < 0 {
-		return fmt.Errorf("最大空闲连接数不能为负数")
+	if username := os.Getenv("DB_USERNAME"); username != "" {
+		cfg.DB.User = username
 	}
-	if db.MaxOpenConns < 0 {
-		return fmt.Errorf("最大打开连接数不能为负数")
+	if user := os.Getenv("DB_USER"); user != "" {
+		cfg.DB.User = user
 	}
-	if db.ConnMaxLifetime <= 0 {
-		return fmt.Errorf("连接最大生命周期必须大于0")
+	if password := os.Getenv("DB_PASSWORD"); password != "" {
+		cfg.DB.PASSWORD = password
 	}
-	return nil
-}
+	if dbName := os.Getenv("DB_NAME"); dbName != "" {
+		cfg.DB.DbNAME = dbName
+	}
+	if dbname := os.Getenv("DB_DBNAME"); dbname != "" {
+		cfg.DB.DbNAME = dbname
+	}
+	if path := os.Getenv("DB_PATH"); path != "" {
+		cfg.DB.Path = path
+	}
 
-func validateJWT(jwt JWTConfig) error {
-	if jwt.Secret == "" {
-		return fmt.Errorf("密钥不能为空")
+	// JWT配置
+	if secret := os.Getenv("JWT_SECRET"); secret != "" {
+		cfg.JWT.Secret = secret
 	}
-	if jwt.ExpireHours <= 0 {
-		return fmt.Errorf("过期时间必须大于0")
+	if expire := os.Getenv("JWT_EXPIRE_HOURS"); expire != "" {
+		if h, err := strconv.Atoi(expire); err == nil {
+			cfg.JWT.ExpireHours = h
+		}
 	}
-	if jwt.RefreshExpireHours <= 0 {
-		return fmt.Errorf("刷新过期时间必须大于0")
+	if refreshExpire := os.Getenv("JWT_REFRESH_EXPIRE_HOURS"); refreshExpire != "" {
+		if h, err := strconv.Atoi(refreshExpire); err == nil {
+			cfg.JWT.RefreshExpireHours = h
+		}
 	}
-	return nil
-}
+	if issuer := os.Getenv("JWT_ISSUER"); issuer != "" {
+		cfg.JWT.Issuer = issuer
+	}
+	if audience := os.Getenv("JWT_AUDIENCE"); audience != "" {
+		cfg.JWT.Audience = audience
+	}
 
-func validateRedis(redis RedisConfig) error {
-	if redis.Host == "" {
-		return fmt.Errorf("主机不能为空")
+	// Redis配置
+	if addr := os.Getenv("REDIS_ADDR"); addr != "" {
+		cfg.Redis.Addr = addr
 	}
-	if redis.Port <= 0 || redis.Port > 65535 {
-		return fmt.Errorf("端口必须在1-65535之间")
+	if password := os.Getenv("REDIS_PASSWORD"); password != "" {
+		cfg.Redis.Password = password
 	}
-	if redis.DB < 0 {
-		return fmt.Errorf("数据库索引不能为负数")
+	if db := os.Getenv("REDIS_DB"); db != "" {
+		if d, err := strconv.Atoi(db); err == nil {
+			cfg.Redis.DB = d
+		}
 	}
-	if redis.MaxRetries < 0 {
-		return fmt.Errorf("最大重试次数不能为负数")
-	}
-	if redis.PoolSize <= 0 {
-		return fmt.Errorf("连接池大小必须大于0")
-	}
-	return nil
-}
 
-func validateLog(log LogConfig) error {
-	validLevels := map[string]bool{"debug": true, "info": true, "warn": true, "error": true}
-	if !validLevels[log.Level] {
-		return fmt.Errorf("日志级别必须是debug、info、warn或error")
+	// 日志配置
+	if level := os.Getenv("LOG_LEVEL"); level != "" {
+		cfg.Log.Level = level
 	}
-	validFormats := map[string]bool{"json": true, "text": true}
-	if !validFormats[log.Format] {
-		return fmt.Errorf("日志格式必须是json或text")
+	if logDir := os.Getenv("LOG_DIR"); logDir != "" {
+		cfg.Log.LogDir = logDir
 	}
-	if log.MaxSize <= 0 {
-		return fmt.Errorf("最大文件大小必须大于0")
-	}
-	if log.MaxBackups <= 0 {
-		return fmt.Errorf("最大备份文件数必须大于0")
-	}
-	if log.MaxAge <= 0 {
-		return fmt.Errorf("最大保存天数必须大于0")
-	}
-	return nil
-}
 
-func validateSecurity(security SecurityConfig) error {
-	if security.BcryptCost < 4 || security.BcryptCost > 31 {
-		return fmt.Errorf("Bcrypt成本必须在4-31之间")
+	// 应用配置
+	if name := os.Getenv("APP_NAME"); name != "" {
+		cfg.App.Name = name
 	}
-	if security.MaxLoginAttempts <= 0 {
-		return fmt.Errorf("最大登录尝试次数必须大于0")
+	if version := os.Getenv("APP_VERSION"); version != "" {
+		cfg.App.Version = version
 	}
-	if security.LockDurationMinutes <= 0 {
-		return fmt.Errorf("账户锁定时间必须大于0")
+	if env := os.Getenv("APP_ENVIRONMENT"); env != "" {
+		cfg.App.Environment = env
 	}
-	return nil
-}
-
-func validateCORS(cors CORSConfig) error {
-	if cors.Enable && len(cors.AllowOrigins) == 0 {
-		return fmt.Errorf("启用CORS时必须指定允许的来源")
+	if debug := os.Getenv("APP_DEBUG"); debug != "" {
+		if d, err := strconv.ParseBool(debug); err == nil {
+			cfg.App.Debug = d
+		}
 	}
-	return nil
-}
-
-func validatePerformance(performance PerformanceConfig) error {
-	// 移除旧验证逻辑，新结构中没有这些字段
-	return nil
-}
-
-func validateUpload(upload UploadConfig) error {
-	if upload.MaxFileSize == "" {
-		return fmt.Errorf("最大文件大小不能为空")
-	}
-	if len(upload.AllowedExtensions) == 0 {
-		return fmt.Errorf("必须指定允许的文件扩展名")
-	}
-	return nil
-}
-
-func validateMonitoring(monitoring MonitoringConfig) error {
-	// 移除旧验证逻辑，新结构中没有这些字段
-	return nil
-}
-
-func validateSwagger(swagger SwaggerConfig) error {
-	if swagger.Enable && swagger.Host == "" {
-		return fmt.Errorf("启用Swagger时必须指定主机地址")
-	}
-	return nil
 }

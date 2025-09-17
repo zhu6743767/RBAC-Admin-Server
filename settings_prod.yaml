@@ -9,25 +9,20 @@
 #   - 生产级日志配置和备份策略
 # =================================================================================
 
-# 服务器配置
-server:
-  port: ${SERVER_PORT:-8080}    # 生产环境端口，通过环境变量配置
-  mode: "release"              # 生产模式：release
-  read_timeout: 60s
-  write_timeout: 60s
-  shutdown_timeout: 30s
+# 系统配置
+system:
+  ip: ${SYSTEM_IP:-127.0.0.1}    # 监听IP，通过环境变量配置
+  port: ${SYSTEM_PORT:-8080}      # 生产环境端口，通过环境变量配置
 
 # 数据库配置 - 生产环境使用环境变量
 # 所有敏感信息必须通过环境变量配置
-database:
-  type: "mysql"                 # 生产环境使用MySQL
-  host: ${DB_HOST}              # 数据库主机（环境变量）
+db:
+  mode: "mysql"                 # 生产环境使用MySQL
+  host: ${DB_HOST:-192.168.10.199}  # 数据库主机（环境变量，默认为192.168.10.199）
   port: ${DB_PORT:-3306}         # 数据库端口
-  username: ${DB_USERNAME}      # 数据库用户名（环境变量）
-  password: ${DB_PASSWORD}      # 数据库密码（环境变量）
-  database: ${DB_NAME:-rbac_admin}  # 数据库名称
-  charset: "utf8mb4"
-  collation: "utf8mb4_unicode_ci"
+  user: ${DB_USERNAME:-root}      # 数据库用户名（环境变量，默认为root）
+  password: ${DB_PASSWORD}        # 数据库密码（环境变量）
+  dbname: ${DB_NAME:-rbacadmin}  # 数据库名称（环境变量，默认为rbacadmin）
   max_open_conns: 200           # 生产环境高并发连接数
   max_idle_conns: 50
   conn_max_lifetime: 8h         # 生产环境长连接生命周期
@@ -45,10 +40,9 @@ jwt:
 
 # Redis配置 - 生产环境使用集群或哨兵
 redis:
-  host: ${REDIS_HOST:-localhost}  # Redis主机（环境变量）
-  port: ${REDIS_PORT:-6379}        # Redis端口
+  addr: ${REDIS_ADDR:-192.168.10.199:6379}  # Redis地址（环境变量，默认为192.168.10.199:6379）
   password: ${REDIS_PASSWORD}     # Redis密码（环境变量）
-  db: 0                           # 生产环境使用DB0
+  db: ${REDIS_DB:-4}              # Redis数据库编号（环境变量，默认为4）
   pool_size: 500                  # 生产环境大连接池
   min_idle_conns: 50
   max_conn_age: 1h
