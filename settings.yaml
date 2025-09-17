@@ -6,14 +6,18 @@
 # 🖥️ 服务器配置
 system:
   ip: 127.0.0.1               # 服务IP地址
-  port: 8080                   # 🗄️ 数据库配置
+  port: 8080                   # 服务端口
+
+# 🗄️ 数据库配置
 db:
   mode: mysql                  # 数据库类型: mysql, postgres, sqlite
   host: localhost              # 数据库主机
   port: 3306                  # 数据库端口
   user: root                  # 数据库用户名
   password: ""                # 数据库密码（建议通过环境变量配置）
-  db_name: rbacadmin         # 🔄 Redis配置
+  db_name: rbacadmin         # 数据库名称
+
+# 🔄 Redis配置
 redis:
   addr: localhost:6379        # Redis地址
   password: ""                # Redis密码
