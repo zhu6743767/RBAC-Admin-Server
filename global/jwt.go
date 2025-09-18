@@ -28,6 +28,8 @@ func GenerateToken(userID uint) (string, error) {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(Config.JWT.ExpireHours) * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    Config.JWT.Issuer,
+			Audience:  jwt.ClaimStrings{Config.JWT.Audience},
 		},
 	}
 
