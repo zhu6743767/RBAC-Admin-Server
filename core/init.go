@@ -8,6 +8,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"rbac.admin/config"
+	"rbac.admin/global"
 	"rbac.admin/models"
 )
 
@@ -33,6 +34,12 @@ func InitSystem(cfg *config.Config) error {
 		return fmt.Errorf("初始化数据库失败: %v", err)
 	}
 	logrus.Info("✅ 数据库初始化成功")
+	
+	// 设置全局数据库连接
+	global.DB = DB
+	
+	// 设置全局配置
+	global.Config = cfg
 
 	// 4. 初始化Redis
 	if err := InitRedis(&cfg.Redis); err != nil {

@@ -9,13 +9,13 @@ system:
   port: 8080                   # 🗄️ 数据库配置
 db:
   mode: mysql                  # 数据库类型: mysql, postgres, sqlite
-  host: localhost              # 数据库主机
+  host: 192.168.10.199              # 数据库主机
   port: 3306                  # 数据库端口
   user: root                  # 数据库用户名
-  password: ""                # 数据库密码（建议通过环境变量配置）
+  password: Zdj_7819!                # 数据库密码（建议通过环境变量配置）
   db_name: rbacadmin         # 🔄 Redis配置
 redis:
-  addr: localhost:6379        # Redis地址
+  addr: 192.168.10.199:6379        # Redis地址
   password: ""                # Redis密码
   db: 0                       # Redis数据库编号
 

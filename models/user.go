@@ -22,6 +22,7 @@ type User struct {
 	DepartmentID uint       `gorm:"comment:部门ID" json:"department_id"`
 	Department   Department `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
 	Roles        []Role     `gorm:"many2many:user_roles;" json:"roles,omitempty"`
+	IsAdmin      bool       `gorm:"type:tinyint;default:0;comment:是否管理员" json:"is_admin"`
 }
 
 // TableName 设置表名

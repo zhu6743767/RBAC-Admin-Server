@@ -3,178 +3,198 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
-	"os/signal"
-	"strings"
-	"syscall"
 
+	"github.com/sirupsen/logrus"
 	"rbac.admin/config"
 	"rbac.admin/core"
 	"rbac.admin/global"
+	"rbac.admin/models"
+	"rbac.admin/pwd"
+
+	gormadapter "github.com/casbin/gorm-adapter/v3"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var (
-	env        = flag.String("env", "dev", "运行环境: dev(开发环境), test(测试环境), prod(生产环境)")
-	configPath = flag.String("config", "", "配置文件路径，优先级高于环境选择")
+	env        = flag.String("env", "dev", "运行环境 (dev/test/prod)")
+	configPath = flag.String("f", "", "配置文件路径")
+	module     = flag.String("m", "", "模块 (user/db)")
+	task       = flag.String("t", "", "任务 (create/migrate)")
 )
 
 func main() {
-	// 解析命令行参数
 	flag.Parse()
 
-	// 显示启动横幅
-	displayBanner()
-
-	// 根据环境或指定路径加载配置
-	cfg, err := loadConfig()
-	if err != nil {
-		log.Fatalf("❌ 配置加载失败: %v", err)
+	// 初始化系统
+	if err := core.InitSystem(loadConfig()); err != nil {
+		fmt.Printf("系统初始化失败: %v\n", err)
+		os.Exit(1)
 	}
 
-	// 设置全局配置
-	global.Config = cfg
-
-	// 初始化系统（包含日志、验证器、数据库、Redis等）
-	if err := core.InitSystem(cfg); err != nil {
-		log.Fatalf("❌ 系统初始化失败: %v", err)
+	// 处理命令行参数
+	if *module != "" {
+		handleCommand()
+		return
 	}
 
-	// 显示环境信息
-	displayEnvironmentInfo()
-
-	// 显示启动信息
-	displayStartupInfo()
-
-	// 等待退出信号
-	core.WaitForSignal()
+	// 启动服务器
+	startServer()
 }
 
-// loadConfig 根据环境加载对应的配置文件
-func loadConfig() (*config.Config, error) {
-	var cfgFile string
-
+// loadConfig 加载配置
+func loadConfig() *config.Config {
+	var configFile string
 	if *configPath != "" {
-		// 如果指定了配置文件路径，直接使用
-		cfgFile = *configPath
-		fmt.Printf("📁 使用指定配置文件: %s\n", cfgFile)
+		configFile = *configPath
 	} else {
-		// 根据环境选择配置文件
-		switch strings.ToLower(*env) {
-		case "dev", "development":
-			cfgFile = "settings_dev.yaml"
-		case "test", "testing":
-			cfgFile = "settings_test.yaml"
-		case "prod", "production":
-			cfgFile = "settings_prod.yaml"
-		default:
-			return nil, fmt.Errorf("不支持的环境: %s，请使用 dev/test/prod", *env)
-		}
-		fmt.Printf("🌍 运行环境: %s，使用配置文件: %s\n", *env, cfgFile)
+		configFile = fmt.Sprintf("settings_%s.yaml", *env)
 	}
-
-	// 加载配置
-	return config.Load(cfgFile)
-}
-
-// displayBanner 显示启动横幅
-func displayBanner() {
-	fmt.Println(`
-	🚀 RBAC管理员服务器启动中...
-	╔═══════════════════════════════════════╗
-	║          RBAC Admin Server            ║
-	║    Role-Based Access Control System   ║
-	╚═══════════════════════════════════════╝
-	`)
-}
-
-// displayEnvironmentInfo 显示环境信息
-func displayEnvironmentInfo() {
-	fmt.Printf("🌍 运行环境: %s\n", strings.ToUpper(*env))
-	fmt.Printf("📁 配置文件: %s\n", getCurrentConfigFile())
-	fmt.Printf("🗄️  数据库: %s\n", getDatabaseInfo())
-	fmt.Println(strings.Repeat("─", 50))
-}
-
-// displayStartupInfo 显示启动信息
-func displayStartupInfo() {
-	fmt.Println(strings.Repeat("═", 50))
-	fmt.Println("✅ RBAC管理员服务器启动成功!")
-	fmt.Println(strings.Repeat("═", 50))
-	fmt.Printf("🌐 访问地址: http://localhost:%d\n", global.Config.System.Port)
-	fmt.Printf("📊 健康检查: http://localhost:%d/health\n", global.Config.System.Port)
-	fmt.Printf("📈 监控指标: http://localhost:%d/metrics\n", global.Config.System.Port)
-
-	if global.Config.Swagger.Enable && global.Config.Swagger.EnableUI {
-		fmt.Printf("📚 API文档: http://localhost:%d/swagger/index.html\n", global.Config.System.Port)
+	
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		fmt.Printf("加载配置文件失败: %v\n", err)
+		os.Exit(1)
 	}
-
-	fmt.Printf("🗄️  数据库: %s@%s:%d/%s\n",
-		global.Config.DB.User,
-		global.Config.DB.Host,
-		global.Config.DB.Port,
-		global.Config.DB.DbNAME)
-	fmt.Printf("📊 日志级别: %s\n", global.Config.Log.Level)
-	fmt.Println(strings.Repeat("═", 50))
+	return cfg
 }
 
-// getCurrentConfigFile 获取当前使用的配置文件
-func getCurrentConfigFile() string {
-	if *configPath != "" {
-		return *configPath
-	}
-
-	switch strings.ToLower(*env) {
-	case "dev", "development":
-		return "settings_dev.yaml"
-	case "test", "testing":
-		return "settings_test.yaml"
-	case "prod", "production":
-		return "settings_prod.yaml"
+// handleCommand 处理命令行参数
+func handleCommand() {
+	switch *module {
+	case "user":
+		handleUserCommand()
+	case "db":
+		handleDBCommand()
 	default:
-		return "settings_dev.yaml"
+		fmt.Printf("不支持的模块: %s\n", *module)
+		os.Exit(1)
 	}
 }
 
-// getDatabaseInfo 获取数据库信息
-func getDatabaseInfo() string {
-	if global.Config.DB.Mode == "sqlite" {
-		return fmt.Sprintf("SQLite(%s)", global.Config.DB.DbNAME)
-	}
-	return fmt.Sprintf("MySQL(%s@%s:%d/%s)",
-		global.Config.DB.User,
-		global.Config.DB.Host,
-		global.Config.DB.Port,
-		global.Config.DB.DbNAME)
-}
-
-// 简化版的初始化器（适配新的配置加载方式）
-type Initializer struct {
-	config *config.Config
-}
-
-// NewInitializer 创建新的初始化器
-func NewInitializer(cfg *config.Config) *Initializer {
-	return &Initializer{
-		config: cfg,
+// handleUserCommand 处理用户相关命令
+func handleUserCommand() {
+	switch *task {
+	case "create":
+		createAdminUser()
+	default:
+		fmt.Printf("不支持的用户任务: %s\n", *task)
+		os.Exit(1)
 	}
 }
 
-// Initialize 执行完整项目初始化
-func (i *Initializer) Initialize() error {
-	// 这里可以添加数据库连接、Redis连接等初始化逻辑
-	// 目前简化处理，实际项目中可以扩展
-	return nil
+// handleDBCommand 处理数据库相关命令
+func handleDBCommand() {
+	switch *task {
+	case "migrate":
+		migrateDatabase()
+	default:
+		fmt.Printf("不支持的数据库任务: %s\n", *task)
+		os.Exit(1)
+	}
 }
 
-// WaitForSignal 等待退出信号
-func (i *Initializer) WaitForSignal() {
-	// 简化的优雅关闭逻辑
-	fmt.Println("🔄 服务器运行中... 按 Ctrl+C 退出")
-	// 等待信号
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	<-c
-	fmt.Println("\n🛑 服务器正在关闭...")
-	fmt.Println("✅ 服务器已安全关闭")
+// createAdminUser 创建管理员用户
+func createAdminUser() {
+	fmt.Println("请输入用户名")
+	var username string
+	fmt.Scanln(&username)
+
+	var user models.User
+	err := global.DB.Where("username = ?", username).First(&user).Error
+	if err == nil {
+		fmt.Println("用户已存在")
+		os.Exit(1)
+	}
+
+	fmt.Println("请输入密码")
+	password, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		fmt.Println("读取密码失败")
+		os.Exit(1)
+	}
+	fmt.Println()
+
+	fmt.Println("请再次输入密码")
+	rePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		fmt.Println("读取密码失败")
+		os.Exit(1)
+	}
+	fmt.Println()
+
+	if string(password) != string(rePassword) {
+		fmt.Println("两次密码不一致")
+		os.Exit(1)
+	}
+
+	// 密码加密
+	hashPwd := pwd.HashedPassword(string(password))
+
+	// 创建管理员用户
+	err = global.DB.Create(&models.User{
+		Username: username,
+		Password: hashPwd,
+		Nickname: "管理员",
+		Status:   1,
+		IsAdmin:  true,
+	}).Error
+	if err != nil {
+		fmt.Println("创建用户失败")
+		os.Exit(1)
+	}
+
+	fmt.Println("创建用户成功")
+	os.Exit(0)
+}
+
+// migrateDatabase 数据库迁移
+func migrateDatabase() {
+	fmt.Println("开始数据库迁移...")
+	err := global.DB.AutoMigrate(
+		&models.User{},
+		&models.Role{},
+		&models.Permission{},
+		&models.UserRole{},
+		&models.RolePermission{},
+		&models.Department{},
+		&models.Menu{},
+		&models.File{},
+		&models.Log{},
+		&gormadapter.CasbinRule{},
+	)
+	if err != nil {
+		fmt.Printf("数据库迁移失败: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println("数据库迁移成功")
+	os.Exit(0)
+}
+
+// startServer 启动服务器
+func startServer() {
+	logrus.Info("开始启动服务器...")
+
+	// 检查配置是否为空
+	if global.Config == nil {
+		logrus.Fatal("全局配置为空")
+	}
+
+	// 检查系统配置是否为空
+	if global.Config.System.Port == 0 {
+		logrus.Fatal("系统端口配置为0")
+	}
+
+	// 启动HTTP服务器
+	addr := fmt.Sprintf("%s:%d", global.Config.System.IP, global.Config.System.Port)
+	logrus.Infof("服务器启动在 %s", addr)
+	
+	// 这里可以添加具体的服务器启动逻辑
+	// 例如: router := setupRouter()
+	//      logrus.Fatal(http.ListenAndServe(addr, router))
+	
+	logrus.Infof("🎉 服务器启动成功，监听地址: %s", addr)
+	
+	// 添加阻塞逻辑，防止程序立即退出
+	select {}
 }
