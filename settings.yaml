@@ -6,111 +6,108 @@
 # 🖥️ 服务器配置
 system:
   ip: 127.0.0.1               # 服务IP地址
-  port: 8080                   # 🗄️ 数据库配置
+  port: 8080                  # 服务端口
+
+# 🗄️ 数据库配置
 db:
   mode: mysql                  # 数据库类型: mysql, postgres, sqlite
-  host: 192.168.10.199              # 数据库主机
-  port: 3306                  # 数据库端口
-  user: root                  # 数据库用户名
-  password: Zdj_7819!                # 数据库密码（建议通过环境变量配置）
-  db_name: rbacadmin         # 🔄 Redis配置
+  host: 192.168.10.199         # 数据库主机
+  port: 3306                   # 数据库端口
+  user: root                   # 数据库用户名
+  password: Zdj_7819!          # 数据库密码（建议通过环境变量配置）
+  dbname: rbacadmin            # 数据库名称
+  max_open_conns: 100          # 最大连接数，防止连接耗尽
+  max_idle_conns: 10           # 空闲连接数，提高响应速度
+  conn_max_lifetime: 1h        # 连接生命周期
+  conn_max_idle_time: 30m      # 空闲连接超时
+
+# 🔄 Redis配置
 redis:
-  addr: 192.168.10.199:6379        # Redis地址
-  password: ""                # Redis密码
-  db: 0                       # Redis数据库编号
+  addr: 192.168.10.199:6379    # Redis地址
+  password: ""                 # Redis密码
+  db: 0                        # Redis数据库编号
+  pool_size: 10                # 连接池大小
+  min_idle_conns: 5            # 最小空闲连接数
 
 # 📝 日志配置
 log:
-  level: "info"               # 日志级别: debug, info, warn, error
-  format: "text"              # 日志格式: json, text
-  output: "both"              # 输出方式: console, file, both
-  log_dir: "./logs"          # 日志目录
-  max_size: 100               # 最大文件大小(MB)
-  max_backups: 3              # 最大备份文件数
-  max_age: 7                  # 最大保存天数
+  level: "info"                # 日志级别: debug, info, warn, error
+  format: "text"               # 日志格式: json, text
+  output: "both"               # 输出方式: console, file, both
+  log_dir: "./logs"            # 日志目录
+  max_size: 100                # 最大文件大小(MB)
+  max_backups: 3               # 最大备份文件数
+  max_age: 7                   # 最大保存天数
   compress: true               # 是否压缩旧日志
-  enable_caller: true         # 是否启用调用者信息
-  enable_trace: false         # 是否启用追踪信息
+  enable_caller: true          # 是否启用调用者信息
+  enable_trace: false          # 是否启用追踪信息
 
 # 🔐 JWT认证配置
 jwt:
   secret: "aB3kL9mN7xY2qR8sT1uV4wE6zC0pF5gH"  # JWT密钥 (大小写字母+数字组合)
-  expire_hours: 24                       # Token过期时间(小时)
-  refresh_expire_hours: 168              # 刷新Token过期时间(小时)
-  issuer: "rbac-admin-server"            # Token签发者
-  audience: "rbac-client"                # Token受众
+  expire_hours: 24                           # Token过期时间(小时)
+  refresh_expire_hours: 168                  # 刷新Token过期时间(小时)
+  issuer: "rbac-admin-server"                # Token签发者
+  audience: "rbac-client"                    # Token受众
 
 # 🌐 CORS配置
 cors:
-  enable: true                # 是否启用CORS
-  allow_origins:              # 允许的来源
+  enable: true                 # 是否启用CORS
+  allow_origins:               # 允许的来源
     - "http://localhost:3000"
     - "http://localhost:8080"
-  allow_methods:              # 允许的HTTP方法
+  allow_methods:               # 允许的HTTP方法
     - "GET"
     - "POST"
     - "PUT"
     - "DELETE"
     - "OPTIONS"
-  allow_headers:              # 允许的请求头
-    - "Authorization"
+  allow_headers:               # 允许的HTTP头
+    - "Origin"
     - "Content-Type"
-    - "X-Requested-With"
-  expose_headers:             # 暴露的响应头
-    - "X-Total-Count"
-  allow_credentials: true    # 是否允许携带凭证
-  max_age: 12h                # 预检请求缓存时间
+    - "Authorization"
+  allow_credentials: true      # 是否允许凭证
+  max_age: 3600                # 预检请求缓存时间
 
 # 🔒 安全配置
 security:
-  bcrypt_cost: 10              # Bcrypt加密成本(4-31)
-  max_login_attempts: 5        # 最大登录尝试次数
-  lock_duration_minutes: 30    # 账户锁定时间(分钟)
-  session_timeout: 24h         # 会话超时时间
-  api_key_header: "X-API-Key"  # API密钥请求头
-  enable_csrf: true            # 是否启用CSRF保护
-  csrf_secret: "csrf-secret-key"  # CSRF密钥
+  enable_csrf: false           # 是否启用CSRF保护
+  rate_limit: 100              # 每分钟请求限制
+  xss_protection: true         # 是否启用XSS保护
+  content_security_policy: "default-src 'self'"
 
 # ⚡ 性能配置
 performance:
-  enable_pprof: false           # 是否启用pprof调试
-  max_upload_size: "10MB"     # 最大上传文件大小
-  request_rate_limit: 100      # 请求频率限制
-  burst_rate_limit: 200        # 突发请求限制
-  enable_compression: true     # 是否启用压缩
-  compression_level: 6         # 压缩级别1-9
+  enable_gzip: true            # 是否启用Gzip压缩
+  cache_size: 100              # 缓存大小(MB)
+  request_timeout: 30s         # 请求超时时间
 
-# 📂 文件上传配置
+# 📤 上传配置
 upload:
-  max_file_size: "10MB"        # 最大文件大小
-  allowed_extensions: [".jpg", ".jpeg", ".png", ".gif", ".pdf"]
-  allowed_mime_types: ["image/jpeg", "image/png", "image/gif", "application/pdf"]
-  storage_type: "local"        # 存储类型
-  storage_path: "./uploads"    # 本地存储路径
-  max_files_per_request: 5     # 单次请求最大文件数
+  enable: true                 # 是否启用文件上传
+  max_size: 10                 # 最大文件大小(MB)
+  save_path: "./uploads"       # 文件保存路径
+  allow_types:                 # 允许的文件类型
+    - "image/jpeg"
+    - "image/png"
+    - "application/pdf"
 
 # 📊 监控配置
 monitoring:
-  enable_health_check: true     # 是否启用健康检查
-  health_check_path: "/health"  # 健康检查路径
-  enable_metrics: true          # 是否启用指标收集
-  metrics_path: "/metrics"    # 指标路径
-  enable_tracing: false         # 是否启用链路追踪
-  tracing_endpoint: "http://localhost:14268/api/traces"  # 追踪服务端点
+  enable: false                # 是否启用监控
+  prometheus_port: 9090        # Prometheus监控端口
 
 # 📚 Swagger配置
 swagger:
-  enable: true                  # 是否启用Swagger
-  title: "RBAC管理员API"        # API标题
-  description: "企业级RBAC权限管理API"  # API描述
+  enable: true                 # 是否启用Swagger
+  path: "/swagger/"            # Swagger路径
+  title: "RBAC管理员系统API"     # Swagger标题
+  description: "RBAC权限管理系统API文档"
   version: "1.0.0"             # API版本
-  host: "localhost:8080"       # API主机地址
-  base_path: "/api/v1"         # API基础路径
-  enable_ui: true              # 是否启用Swagger UI
 
-# 🎯 应用配置
+# 📱 应用配置
 app:
-  name: "RBAC管理员服务器"        # 应用名称
-  version: "1.0.0"              # 应用版本
-  environment: "development"    # 应用环境
-  debug: true                   # 是否调试模式
+  name: "RBAC管理员系统"
+  version: "1.0.0"
+  description: "企业级RBAC权限管理解决方案"
+  copyright: "© 2024 RBAC管理员系统团队"

@@ -1,252 +1,307 @@
-// Package config 提供配置管理功能
 package config
 
 import (
 	"time"
 )
 
-// Config 主配置结构体
+// Config 全局配置结构体
 type Config struct {
-	System      SystemConfig      `mapstructure:"system" json:"system" yaml:"system"`
-	DB          DBConfig          `mapstructure:"db" json:"db" yaml:"db"`
-	Redis       RedisConfig       `mapstructure:"redis" json:"redis" yaml:"redis"`
-	Log         LogConfig         `mapstructure:"log" json:"log" yaml:"log"`
-	JWT         JWTConfig         `mapstructure:"jwt" json:"jwt" yaml:"jwt"`
-	CORS        CORSConfig        `mapstructure:"cors" json:"cors" yaml:"cors"`
-	Security    SecurityConfig    `mapstructure:"security" json:"security" yaml:"security"`
-	Performance PerformanceConfig `mapstructure:"performance" json:"performance" yaml:"performance"`
-	Upload      UploadConfig      `mapstructure:"upload" json:"upload" yaml:"upload"`
-	Monitoring  MonitoringConfig  `mapstructure:"monitoring" json:"monitoring" yaml:"monitoring"`
-	Swagger     SwaggerConfig     `mapstructure:"swagger" json:"swagger" yaml:"swagger"`
-	App         AppConfig         `mapstructure:"app" json:"app" yaml:"app"`
+	System      SystemConfig      `yaml:"system"`
+	DB          DBConfig          `yaml:"db"`
+	Redis       RedisConfig       `yaml:"redis"`
+	Log         LogConfig         `yaml:"log"`
+	JWT         JWTConfig         `yaml:"jwt"`
+	Security    SecurityConfig    `yaml:"security"`
+	CORS        CORSConfig        `yaml:"cors"`
+	Performance PerformanceConfig `yaml:"performance"`
+	Upload      UploadConfig      `yaml:"upload"`
+	Monitoring  MonitoringConfig  `yaml:"monitoring"`
+	Swagger     SwaggerConfig     `yaml:"swagger"`
+	App         AppConfig         `yaml:"app"`
 }
 
-// SystemConfig 系统配置结构体
+// SystemConfig 系统配置
 type SystemConfig struct {
-	IP   string `mapstructure:"ip" json:"ip" yaml:"ip"`     // 监听IP
-	Port int    `mapstructure:"port" json:"port" yaml:"port"` // HTTP服务监听端口，默认8080
+	IP        string `yaml:"ip"`
+	Port      int    `yaml:"port"`
+	Name      string `yaml:"name"`
+	Version   string `yaml:"version"`
+	Timezone  string `yaml:"timezone"`
 }
 
-// DBConfig 数据库配置结构体
+// DBConfig 数据库配置
 type DBConfig struct {
-	Mode            string        `mapstructure:"mode" json:"mode" yaml:"mode"`                        // 数据库类型: mysql, postgres, sqlite, sqlserver
-	Driver          string        `mapstructure:"driver" json:"driver" yaml:"driver"`                  // 数据库驱动（可选，按Mode自动推导）
-	Host            string        `mapstructure:"host" json:"host" yaml:"host"`                        // 数据库服务器地址
-	Port            int           `mapstructure:"port" json:"port" yaml:"port"`                          // 数据库端口，MySQL默认3306
-	User            string        `mapstructure:"user" json:"user" yaml:"user"`                          // 数据库用户名
-	PASSWORD        string        `mapstructure:"password" json:"password" yaml:"password"`              // 数据库密码（建议使用环境变量）
-	DbNAME          string        `mapstructure:"dbname" json:"dbname" yaml:"dbname"`                  // 数据库名称
-	Path            string        `mapstructure:"path" json:"path" yaml:"path"`                          // SQLite专用路径
-	MaxOpenConns    int           `mapstructure:"max_open_conns" json:"max_open_conns" yaml:"max_open_conns"`    // 最大连接数，防止连接耗尽
-	MaxIdleConns    int           `mapstructure:"max_idle_conns" json:"max_idle_conns" yaml:"max_idle_conns"`    // 空闲连接数，提高响应速度
-	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime" json:"conn_max_lifetime" yaml:"conn_max_lifetime"` // 连接生命周期
-	ConnMaxIdleTime time.Duration `mapstructure:"conn_max_idle_time" json:"conn_max_idle_time" yaml:"conn_max_idle_time"` // 空闲连接超时
-	SSLMode         string        `mapstructure:"ssl_mode" json:"ssl_mode" yaml:"ssl_mode"`              // SSL模式
-	Timeout         string        `mapstructure:"timeout" json:"timeout" yaml:"timeout"`                  // 连接超时
+	Mode              string        `yaml:"mode"`
+	Host              string        `yaml:"host"`
+	Port              int           `yaml:"port"`
+	User              string        `yaml:"user"`
+	Password          string        `yaml:"password"`
+	DbNAME            string        `yaml:"dbname"`
+	SSLMode           string        `yaml:"sslmode"`
+	Timeout           string        `yaml:"timeout"`
+	Charset           string        `yaml:"charset"`
+	Collation         string        `yaml:"collation"`
+	MaxIdleConns      int           `yaml:"max_idle_conns"`
+	MaxOpenConns      int           `yaml:"max_open_conns"`
+	ConnMaxLifetime   time.Duration `yaml:"conn_max_lifetime"`
+	ConnMaxIdleTime   time.Duration `yaml:"conn_max_idle_time"`
+	Path              string        `yaml:"path"`
 }
 
-// JWTConfig JWT配置结构体
-type JWTConfig struct {
-	Secret             string `yaml:"secret"`               // JWT签名密钥，必须保密且足够复杂
-	ExpireHours        int    `yaml:"expire_hours"`         // 令牌有效期，单位小时
-	RefreshExpireHours int    `yaml:"refresh_expire_hours"` // 刷新令牌有效期，单位小时
-	Issuer             string `yaml:"issuer"`               // 令牌颁发者
-	Audience           string `yaml:"audience"`             // 令牌受众
-}
-
-// RedisConfig Redis配置结构体
+// RedisConfig Redis配置
 type RedisConfig struct {
-	Addr     string `mapstructure:"addr" json:"addr" yaml:"addr"`         // Redis地址，格式 host:port
-	Password string `mapstructure:"password" json:"password" yaml:"password"` // Redis密码（如果没有密码留空）
-	DB       int    `mapstructure:"db" json:"db" yaml:"db"`                 // 数据库编号，0-15
+	Addr               string        `yaml:"addr"`
+	Password           string        `yaml:"password"`
+	DB                 int           `yaml:"db"`
+	PoolSize           int           `yaml:"pool_size"`
+	MinIdleConns       int           `yaml:"min_idle_conns"`
+	MaxConnAge         time.Duration `yaml:"max_conn_age"`
+	PoolTimeout        time.Duration `yaml:"pool_timeout"`
+	IdleTimeout        time.Duration `yaml:"idle_timeout"`
+	IdleCheckFrequency time.Duration `yaml:"idle_check_frequency"`
+	ReadTimeout        time.Duration `yaml:"read_timeout"`
+	WriteTimeout       time.Duration `yaml:"write_timeout"`
+	DialTimeout        time.Duration `yaml:"dial_timeout"`
+	MaxRetries         int           `yaml:"max_retries"`
+	MinRetryBackoff    time.Duration `yaml:"min_retry_backoff"`
+	MaxRetryBackoff    time.Duration `yaml:"max_retry_backoff"`
 }
 
-// LogConfig 日志配置结构体
+// JWTConfig JWT配置
+type JWTConfig struct {
+	Secret              string `yaml:"secret"`
+	ExpireHours         int    `yaml:"expire_hours"`
+	RefreshExpireHours  int    `yaml:"refresh_expire_hours"`
+	Issuer              string `yaml:"issuer"`
+	Audience            string `yaml:"audience"`
+	SigningMethod       string `yaml:"signing_method"`
+	TokenName           string `yaml:"token_name"`
+}
+
+// LogConfig 日志配置
 type LogConfig struct {
-	Level        string `mapstructure:"level" json:"level" yaml:"level"`
-	Format       string `mapstructure:"format" json:"format" yaml:"format"`
-	Output       string `mapstructure:"output" json:"output" yaml:"output"`
-	LogDir       string `mapstructure:"log_dir" json:"log_dir" yaml:"log_dir"`
-	MaxSize      int    `mapstructure:"max_size" json:"max_size" yaml:"max_size"`
-	MaxBackups   int    `mapstructure:"max_backups" json:"max_backups" yaml:"max_backups"`
-	MaxAge       int    `mapstructure:"max_age" json:"max_age" yaml:"max_age"`
-	Compress     bool   `mapstructure:"compress" json:"compress" yaml:"compress"`
-	EnableCaller bool   `mapstructure:"enable_caller" json:"enable_caller" yaml:"enable_caller"`
-	EnableTrace  bool   `mapstructure:"enable_trace" json:"enable_trace" yaml:"enable_trace"`
+	Level      string `yaml:"level"`
+	Dir        string `yaml:"dir"`
+	Filename   string `yaml:"filename"`
+	MaxSize    int    `yaml:"max_size"`
+	MaxBackups int    `yaml:"max_backups"`
+	MaxAge     int    `yaml:"max_age"`
+	Compress   bool   `yaml:"compress"`
+	Stdout     bool   `yaml:"stdout"`
+	Format     string `yaml:"format"`
+	Output     string `yaml:"output"`
+	LogDir     string `yaml:"log_dir"`
+	EnableCaller bool  `yaml:"enable_caller"`
 }
 
-// SecurityConfig 安全配置结构体
+// SecurityConfig 安全配置
 type SecurityConfig struct {
-	BcryptCost          int           `yaml:"bcrypt_cost"`           // 密码加密强度，值越大越安全但越慢
-	MaxLoginAttempts    int           `yaml:"max_login_attempts"`    // 最大登录尝试次数，防暴力破解
-	LockDurationMinutes int           `yaml:"lock_duration_minutes"` // 账户锁定时间，单位分钟
-	SessionTimeout      time.Duration `yaml:"session_timeout"`       // 会话超时时间
-	APIKeyHeader        string        `yaml:"api_key_header"`        // API密钥请求头
-	EnableCSRF          bool          `yaml:"enable_csrf"`           // 是否启用CSRF保护
-	CSRFSecret          string        `yaml:"csrf_secret"`           // CSRF密钥
+	CORSOrigins             []string        `yaml:"cors_origins"`
+	CSRFSecret              string          `yaml:"csrf_secret"`
+	XSSProtection           bool            `yaml:"xss_protection"`
+	FrameOptions            string          `yaml:"frame_options"`
+	ContentSecurityPolicy   string          `yaml:"content_security_policy"`
+	RateLimit               int             `yaml:"rate_limit"`
+	BruteForceProtection    bool            `yaml:"brute_force_protection"`
+	PasswordComplexity      int             `yaml:"password_complexity"`
+	LoginAttemptsLimit      int             `yaml:"login_attempts_limit"`
+	LoginLockoutTime        int             `yaml:"login_lockout_time"`
+	BcryptCost              int             `yaml:"bcrypt_cost"`
+	MaxLoginAttempts        int             `yaml:"max_login_attempts"`
+	LockDurationMinutes     int             `yaml:"lock_duration_minutes"`
+	SessionTimeout          time.Duration   `yaml:"session_timeout"`
+	APIKeyHeader            string          `yaml:"api_key_header"`
 }
 
-// CORSConfig CORS跨域配置结构体
+// CORSConfig CORS配置
 type CORSConfig struct {
-	Enable           bool          `yaml:"enable"`             // 是否启用CORS
-	AllowOrigins     []string      `yaml:"allow_origins"`      // 允许的源
-	AllowMethods     []string      `yaml:"allow_methods"`      // 允许的方法
-	AllowHeaders     []string      `yaml:"allow_headers"`      // 允许的请求头
-	ExposeHeaders    []string      `yaml:"expose_headers"`     // 暴露的响应头
-	AllowCredentials bool          `yaml:"allow_credentials"`  // 允许携带凭证
-	MaxAge           time.Duration `yaml:"max_age"`            // 预检缓存时间
+	AllowOrigins     []string      `yaml:"allow_origins"`
+	AllowMethods     []string      `yaml:"allow_methods"`
+	AllowHeaders     []string      `yaml:"allow_headers"`
+	AllowCredentials bool          `yaml:"allow_credentials"`
+	ExposeHeaders    []string      `yaml:"expose_headers"`
+	MaxAge           time.Duration `yaml:"max_age"`
 }
 
-// PerformanceConfig 性能配置结构体
+// PerformanceConfig 性能配置
 type PerformanceConfig struct {
-	EnablePprof        bool   `yaml:"enable_pprof"`         // 性能分析工具
-	MaxUploadSize      string `yaml:"max_upload_size"`       // 最大上传文件大小
-	RequestRateLimit   int    `yaml:"request_rate_limit"`    // 请求频率限制
-	BurstRateLimit     int    `yaml:"burst_rate_limit"`      // 突发请求限制
-	EnableCompression  bool   `yaml:"enable_compression"`    // 启用响应压缩
-	CompressionLevel   int    `yaml:"compression_level"`     // 压缩级别1-9
+	MaxRequestSize      int           `yaml:"max_request_size"`
+	MaxUploadSize       string        `yaml:"max_upload_size"`
+	RequestTimeout      time.Duration `yaml:"request_timeout"`
+	ResponseCompression bool          `yaml:"response_compression"`
+	GzipLevel           int           `yaml:"gzip_level"`
+	CacheControl        string        `yaml:"cache_control"`
+	ETag                bool          `yaml:"etag"`
+	RequestRateLimit    int           `yaml:"request_rate_limit"`
+	BurstRateLimit      int           `yaml:"burst_rate_limit"`
+	CompressionLevel    int           `yaml:"compression_level"`
 }
 
-// UploadConfig 文件上传配置结构体
+// UploadConfig 上传配置
 type UploadConfig struct {
-	MaxFileSize        string   `yaml:"max_file_size"`         // 最大文件大小
-	AllowedExtensions  []string `yaml:"allowed_extensions"`    // 允许的文件扩展名
-	AllowedMimeTypes   []string `yaml:"allowed_mime_types"`    // 允许的MIME类型
-	StorageType        string   `yaml:"storage_type"`          // 存储类型
-	StoragePath        string   `yaml:"storage_path"`          // 本地存储路径
-	MaxFilesPerRequest int      `yaml:"max_files_per_request"` // 单次请求最大文件数
+	Dir                string   `yaml:"dir"`
+	MaxSize            int      `yaml:"max_size"`
+	AllowedTypes       []string `yaml:"allowed_types"`
+	FilePermissions    int      `yaml:"file_permissions"`
+	DirPermissions     int      `yaml:"dir_permissions"`
+	MaxFileSize        string   `yaml:"max_file_size"`
+	StorageType        string   `yaml:"storage_type"`
+	StoragePath        string   `yaml:"storage_path"`
+	MaxFilesPerRequest int      `yaml:"max_files_per_request"`
 }
 
-// MonitoringConfig 监控配置结构体
+// MonitoringConfig 监控配置
 type MonitoringConfig struct {
-	EnableHealthCheck bool   `yaml:"enable_health_check"` // 启用健康检查
-	HealthCheckPath   string `yaml:"health_check_path"`   // 健康检查路径
-	EnableMetrics     bool   `yaml:"enable_metrics"`      // 启用指标收集
-	MetricsPath       string `yaml:"metrics_path"`        // 指标路径
-	EnableTracing     bool   `yaml:"enable_tracing"`      // 启用链路追踪
-	TracingEndpoint   string `yaml:"tracing_endpoint"`    // 追踪服务端点
+	HealthCheckPath string `yaml:"health_check_path"`
+	MetricsPath     string `yaml:"metrics_path"`
 }
 
-// SwaggerConfig Swagger文档配置结构体
+// SwaggerConfig Swagger配置
 type SwaggerConfig struct {
-	Enable      bool   `yaml:"enable"`      // 是否启用Swagger
-	Title       string `yaml:"title"`       // API标题
-	Description string `yaml:"description"` // API描述
-	Version     string `yaml:"version"`     // API版本
-	Host        string `yaml:"host"`        // API主机
-	BasePath    string `yaml:"base_path"`   // API基础路径
-	EnableUI    bool   `yaml:"enable_ui"`   // 是否启用Swagger UI
+	Title    string `yaml:"title"`
+	Version  string `yaml:"version"`
+	Host     string `yaml:"host"`
+	BasePath string `yaml:"base_path"`
 }
 
-// AppConfig 应用配置结构体
+// AppConfig 应用配置
 type AppConfig struct {
-	Name        string `yaml:"name"`        // 应用名称
-	Version     string `yaml:"version"`     // 应用版本
-	Environment string `yaml:"environment"` // 应用环境
-	Debug       bool   `yaml:"debug"`       // 是否调试模式
+	Name        string `yaml:"name"`
+	Version     string `yaml:"version"`
+	Environment string `yaml:"environment"`
+	Debug       bool   `yaml:"debug"`
 }
 
 // DefaultConfig 返回默认配置
 func DefaultConfig() *Config {
 	return &Config{
 		System: SystemConfig{
-			IP:   "127.0.0.1",
-			Port: 8080,
+			IP:       "127.0.0.1",
+			Port:     8080,
+			Name:     "RBAC管理员系统",
+			Version:  "1.0.0",
+			Timezone: "Asia/Shanghai",
 		},
 		DB: DBConfig{
 			Mode:            "sqlite",
 			Host:            "localhost",
 			Port:            3306,
 			User:            "root",
-			PASSWORD:        "",
-			DbNAME:          "rbac_admin",
-			MaxOpenConns:    100,
-			MaxIdleConns:    10,
-			ConnMaxLifetime: 1 * time.Hour,
-			ConnMaxIdleTime: 30 * time.Minute,
+			Password:        "",
+			DbNAME:          "rbac_admin.db",
 			SSLMode:         "disable",
 			Timeout:         "30s",
+			Charset:         "utf8mb4",
+			Collation:       "utf8mb4_general_ci",
+			MaxIdleConns:    10,
+			MaxOpenConns:    100,
+			ConnMaxLifetime: time.Hour,
+			ConnMaxIdleTime: 30 * time.Minute,
+			Path:            ":memory:",
 		},
 		Redis: RedisConfig{
-			Addr:     "localhost:6379",
-			Password: "",
-			DB:       0,
+			Addr:               "localhost:6379",
+			Password:           "",
+			DB:                 0,
+			PoolSize:           10,
+			MinIdleConns:       5,
+			MaxConnAge:         time.Hour,
+			PoolTimeout:        30 * time.Second,
+			IdleTimeout:        5 * time.Minute,
+			IdleCheckFrequency: time.Minute,
+			ReadTimeout:        3 * time.Second,
+			WriteTimeout:       3 * time.Second,
+			DialTimeout:        5 * time.Second,
+			MaxRetries:         3,
+			MinRetryBackoff:    time.Millisecond,
+			MaxRetryBackoff:    500 * time.Millisecond,
 		},
 		JWT: JWTConfig{
-			Secret:             "your-jwt-secret-key-here",
-			ExpireHours:        24,
-			RefreshExpireHours: 168,
-			Issuer:             "rbac-admin-server",
-			Audience:           "rbac-client",
-		},
-		Security: SecurityConfig{
-			BcryptCost:          10,
-			MaxLoginAttempts:    5,
-			LockDurationMinutes: 30,
-			SessionTimeout:      24 * time.Hour,
-			APIKeyHeader:        "X-API-Key",
-			EnableCSRF:          true,
-			CSRFSecret:          "csrf-secret-key",
-		},
-		CORS: CORSConfig{
-			Enable:           true,
-			AllowOrigins:     []string{"http://localhost:3000", "http://localhost:8080"},
-			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-			AllowHeaders:     []string{"Authorization", "Content-Type", "X-Requested-With"},
-			ExposeHeaders:    []string{"X-Total-Count"},
-			AllowCredentials: true,
-			MaxAge:           12 * time.Hour,
+			Secret:              "your_jwt_secret_key_minimum_32_characters",
+			ExpireHours:         24,
+			RefreshExpireHours:  168,
+			Issuer:              "rbac-admin-server",
+			Audience:            "rbac-client",
+			SigningMethod:       "HS256",
+			TokenName:           "Authorization",
 		},
 		Log: LogConfig{
-			Level:        "info",
-			Format:       "text",
-			Output:       "both",
-			LogDir:       "./logs",
-			MaxSize:      100,
-			MaxBackups:   3,
-			MaxAge:       7,
-			Compress:     true,
+			Level:      "info",
+			Dir:        "./logs",
+			Filename:   "app.log",
+			MaxSize:    100,
+			MaxBackups: 3,
+			MaxAge:     7,
+			Compress:   true,
+			Stdout:     true,
+			Format:     "text",
+			Output:     "both",
+			LogDir:     "./logs",
 			EnableCaller: true,
-			EnableTrace:  false,
+		},
+		Security: SecurityConfig{
+			CORSOrigins:           []string{"*"},
+			CSRFSecret:            "your_csrf_secret_key_here",
+			XSSProtection:         true,
+			FrameOptions:          "DENY",
+			ContentSecurityPolicy: "default-src 'self'",
+			RateLimit:             100,
+			BruteForceProtection:  true,
+			PasswordComplexity:    8,
+			LoginAttemptsLimit:    5,
+			LoginLockoutTime:      30,
+			BcryptCost:            10,
+			MaxLoginAttempts:      5,
+			LockDurationMinutes:   30,
+			SessionTimeout:        2 * time.Hour,
+			APIKeyHeader:          "X-API-Key",
+		},
+		CORS: CORSConfig{
+			AllowOrigins:     []string{"*"},
+			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+			AllowCredentials: true,
+			ExposeHeaders:    []string{},
+			MaxAge:           12 * time.Hour,
 		},
 		Performance: PerformanceConfig{
-			EnablePprof:        false,
-			MaxUploadSize:      "10MB",
-			RequestRateLimit:   100,
-			BurstRateLimit:     200,
-			EnableCompression:  true,
-			CompressionLevel:   6,
+			MaxRequestSize:      10,
+			MaxUploadSize:       "10MB",
+			RequestTimeout:      30 * time.Second,
+			ResponseCompression: true,
+			GzipLevel:           6,
+			CacheControl:        "no-cache",
+			ETag:                true,
+			RequestRateLimit:    100,
+			BurstRateLimit:      200,
+			CompressionLevel:    6,
 		},
 		Upload: UploadConfig{
-			MaxFileSize:         "10MB",
-			AllowedExtensions:   []string{".jpg", ".jpeg", ".png", ".gif", ".pdf"},
-			AllowedMimeTypes:    []string{"image/jpeg", "image/png", "image/gif", "application/pdf"},
-			StorageType:         "local",
-			StoragePath:         "./uploads",
-			MaxFilesPerRequest:  5,
+			Dir:                "./uploads",
+			MaxSize:            50,
+			AllowedTypes:       []string{"image/jpeg", "image/png", "application/pdf", "application/zip"},
+			FilePermissions:    0644,
+			DirPermissions:     0755,
+			MaxFileSize:        "10MB",
+			StorageType:        "local",
+			StoragePath:        "./uploads",
+			MaxFilesPerRequest: 5,
 		},
 		Monitoring: MonitoringConfig{
-			EnableHealthCheck: true,
-			HealthCheckPath:   "/health",
-			EnableMetrics:     true,
-			MetricsPath:       "/metrics",
-			EnableTracing:     false,
-			TracingEndpoint:   "http://localhost:14268/api/traces",
+			HealthCheckPath: "/health",
+			MetricsPath:     "/metrics",
 		},
 		Swagger: SwaggerConfig{
-			Enable:      true,
-			Title:       "RBAC管理员API",
-			Description: "企业级RBAC权限管理API",
-			Version:     "1.0.0",
-			Host:        "localhost:8080",
-			BasePath:    "/api/v1",
-			EnableUI:    true,
+			Title:    "RBAC管理员API",
+			Version:  "1.0.0",
+			Host:     "localhost:8080",
+			BasePath: "/api/v1",
 		},
 		App: AppConfig{
-			Name:        "RBAC管理员服务器",
+			Name:        "RBAC管理员",
 			Version:     "1.0.0",
 			Environment: "development",
-			Debug:       true,
+			Debug:       false,
 		},
 	}
 }

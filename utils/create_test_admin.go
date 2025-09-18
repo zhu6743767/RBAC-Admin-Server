@@ -27,61 +27,44 @@ func main() {
 		os.Exit(1)
 	}
 	
-	// 创建管理员用户
-	CreateAdminUser()
+	// 创建测试管理员用户
+	createTestAdmin()
 }
 
-func CreateAdminUser() {
-	// 创建用户
-	fmt.Println("请输入用户名:")
-	var username string
-	fmt.Scanln(&username)
-	
-	if username == "" {
-		fmt.Println("用户名不能为空")
-		return
-	}
+func createTestAdmin() {
+	username := "admin"
+	password := "admin123"
 	
 	// 检查用户是否已存在
 	var user models.User
 	err := global.DB.Where("username = ?", username).First(&user).Error
 	if err == nil {
-		fmt.Println("用户已存在")
-		logrus.Error("用户已存在")
+		fmt.Printf("用户 %s 已存在\n", username)
+		logrus.Info("用户已存在")
 		return
 	}
 	
-	fmt.Println("请输入密码:")
-	var password string
-	fmt.Scanln(&password)
-	
-	fmt.Println("请再次输入密码:")
-	var rePassword string
-	fmt.Scanln(&rePassword)
-	
-	if password != rePassword {
-		fmt.Println("两次输入密码不一致")
-		logrus.Error("两次输入密码不一致")
-		return
-	}
-
 	// 密码加密
-	hashPwd := pwd.HashedPassword(string(password))
+	hashPwd := pwd.HashedPassword(password)
 	
 	// 创建管理员用户
 	newUser := models.User{
 		Username: username,
 		Password: hashPwd,
+		Nickname: "管理员",
 		Status:   1, // 正常状态
+		IsAdmin:  true,
 	}
 	
 	err = global.DB.Create(&newUser).Error
 	if err != nil {
-		fmt.Println("创建用户时出错")
-		logrus.Errorf("创建用户时出错: %v", err)
+		fmt.Printf("创建用户失败: %v\n", err)
+		logrus.Errorf("创建用户失败: %v", err)
 		return
 	}
 	
-	fmt.Println("创建用户成功")
+	fmt.Printf("管理员用户 %s 创建成功！\n", username)
+	fmt.Printf("用户名: %s\n", username)
+	fmt.Printf("密码: %s\n", password)
 	logrus.Info("创建用户成功")
 }

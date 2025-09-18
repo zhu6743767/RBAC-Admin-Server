@@ -303,7 +303,7 @@ func applyEnvironmentVariables(cfg *Config) {
 		cfg.DB.User = user
 	}
 	if password := os.Getenv("DB_PASSWORD"); password != "" {
-		cfg.DB.PASSWORD = password
+		cfg.DB.Password = password
 	}
 	if dbName := os.Getenv("DB_NAME"); dbName != "" {
 		cfg.DB.DbNAME = dbName

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -11,6 +12,7 @@ import (
 	"rbac.admin/global"
 	"rbac.admin/models"
 	"rbac.admin/pwd"
+	"rbac.admin/routes"
 
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"golang.org/x/crypto/ssh/terminal"
@@ -100,6 +102,11 @@ func createAdminUser() {
 	var username string
 	fmt.Scanln(&username)
 
+	if username == "" {
+		fmt.Println("用户名不能为空")
+		os.Exit(1)
+	}
+
 	var user models.User
 	err := global.DB.Where("username = ?", username).First(&user).Error
 	if err == nil {
@@ -114,6 +121,11 @@ func createAdminUser() {
 		os.Exit(1)
 	}
 	fmt.Println()
+
+	if len(password) < 6 {
+		fmt.Println("密码长度不能少于6位")
+		os.Exit(1)
+	}
 
 	fmt.Println("请再次输入密码")
 	rePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
@@ -140,7 +152,7 @@ func createAdminUser() {
 		IsAdmin:  true,
 	}).Error
 	if err != nil {
-		fmt.Println("创建用户失败")
+		fmt.Printf("创建用户失败: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -187,14 +199,14 @@ func startServer() {
 
 	// 启动HTTP服务器
 	addr := fmt.Sprintf("%s:%d", global.Config.System.IP, global.Config.System.Port)
-	logrus.Infof("服务器启动在 %s", addr)
 	
-	// 这里可以添加具体的服务器启动逻辑
-	// 例如: router := setupRouter()
-	//      logrus.Fatal(http.ListenAndServe(addr, router))
+	// 设置路由
+	router := routes.SetupRouter()
 	
 	logrus.Infof("🎉 服务器启动成功，监听地址: %s", addr)
 	
-	// 添加阻塞逻辑，防止程序立即退出
-	select {}
+	// 启动HTTP服务器
+	if err := http.ListenAndServe(addr, router); err != nil {
+		logrus.Fatalf("服务器启动失败: %v", err)
+	}
 }

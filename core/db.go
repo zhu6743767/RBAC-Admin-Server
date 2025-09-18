@@ -3,7 +3,6 @@ package core
 import (
 	"database/sql"
 	"fmt"
-	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
@@ -29,6 +28,7 @@ var (
 func InitGorm(cfg *config.DBConfig) error {
 	var dialector gorm.Dialector
 
+	// 根据数据库类型选择驱动
 	switch cfg.Mode {
 	case "mysql":
 		dialector = mysql.Open(buildMysqlDSN(cfg))
@@ -66,10 +66,11 @@ func InitGorm(cfg *config.DBConfig) error {
 		return fmt.Errorf("获取SQL连接失败: %v", err)
 	}
 
-	// 设置连接池参数（使用默认值）
-	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetMaxOpenConns(100)
-	sqlDB.SetConnMaxLifetime(time.Hour)
+	// 设置连接池参数（使用配置文件中的值）
+	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
+	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	sqlDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	sqlDB.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
 
 	// 测试连接
 	if err := sqlDB.Ping(); err != nil {
@@ -79,7 +80,13 @@ func InitGorm(cfg *config.DBConfig) error {
 	DB = db
 	SQLDB = sqlDB
 
-	fmt.Printf("✅ 数据库连接成功: %s@%s:%d/%s\n", cfg.User, cfg.Host, cfg.Port, cfg.DbNAME)
+	// 日志输出连接信息
+	if cfg.Mode == "sqlite" {
+		fmt.Printf("✅ 数据库连接成功: SQLite @ %s\n", cfg.Path)
+	} else {
+		fmt.Printf("✅ 数据库连接成功: %s@%s:%d/%s\n", cfg.User, cfg.Host, cfg.Port, cfg.DbNAME)
+	}
+
 	return nil
 }
 
@@ -87,44 +94,57 @@ func InitGorm(cfg *config.DBConfig) error {
 func buildMysqlDSN(cfg *config.DBConfig) string {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
 		cfg.User,
-		cfg.PASSWORD,
+		cfg.Password, // 使用正确的字段名
 		cfg.Host,
 		cfg.Port,
-		cfg.DbNAME,
+		cfg.DbNAME,   // 使用正确的字段名
 		"utf8mb4")
 	// 默认使用utf8mb4_general_ci排序规则
 	dsn += "&collation=utf8mb4_general_ci"
+
+	// 添加SSL模式
+	if cfg.SSLMode != "" {
+		dsn += fmt.Sprintf("&tls=%s", cfg.SSLMode)
+	}
+
+	// 添加连接超时
+	if cfg.Timeout != "" {
+		dsn += fmt.Sprintf("&timeout=%s", cfg.Timeout)
+	}
 
 	return dsn
 }
 
 // buildPostgresDSN 构建PostgreSQL连接字符串
 func buildPostgresDSN(cfg *config.DBConfig) string {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
 		cfg.Host,
 		cfg.User,
-		cfg.PASSWORD,
-		cfg.DbNAME,
-		cfg.Port)
+		cfg.Password, // 使用正确的字段名
+		cfg.DbNAME,   // 使用正确的字段名
+		cfg.Port,
+		cfg.SSLMode)
 
-	// 添加额外参数
-	dsn += " client_encoding=utf8"
+	// 添加连接超时
+	if cfg.Timeout != "" {
+		dsn += fmt.Sprintf(" connect_timeout=%s", cfg.Timeout)
+	}
 
 	return dsn
 }
 
 // buildSqliteDSN 构建SQLite连接字符串
 func buildSqliteDSN(cfg *config.DBConfig) string {
-	// 如果配置了路径则使用路径，否则使用内存数据库
-	if cfg.Path != "" {
-		return cfg.Path
+	path := cfg.Path
+	if path == "" {
+		path = cfg.DbNAME + ".db"
 	}
-	// 如果配置了数据库名称则使用数据库名称作为文件名
-	if cfg.DbNAME != "" && cfg.DbNAME != ":memory:" {
-		return cfg.DbNAME + ".db"
-	}
-	// 默认使用内存数据库
-	return ":memory:"
+
+	// SQLite连接参数
+	// _pragma=foreign_keys=on 启用外键约束
+	// cache=shared 启用共享缓存
+	// mode=rwc 创建和读写模式
+	return fmt.Sprintf("%s?_pragma=foreign_keys=on&cache=shared&mode=rwc", path)
 }
 
 // CloseDB 关闭数据库连接
