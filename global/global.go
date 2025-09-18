@@ -13,6 +13,7 @@ var Config *config.Config
 
 // Logger 全局日志实例
 // 通过global.Logger可以访问统一的日志系统
+// 支持按时间、大小、等级分片
 var Logger *logrus.Logger
 
 // DB 全局数据库连接
