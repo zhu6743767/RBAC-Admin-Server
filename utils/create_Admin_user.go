@@ -8,8 +8,6 @@ import (
 	"rbac.admin/global"
 	"rbac.admin/models"
 	"rbac.admin/pwd"
-
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -47,7 +45,7 @@ func CreateAdminUser() {
 	err := global.DB.Where("username = ?", username).First(&user).Error
 	if err == nil {
 		fmt.Println("用户已存在")
-		logrus.Error("用户已存在")
+		global.Logger.Error("用户已存在")
 		return
 	}
 	
@@ -61,7 +59,7 @@ func CreateAdminUser() {
 	
 	if password != rePassword {
 		fmt.Println("两次输入密码不一致")
-		logrus.Error("两次输入密码不一致")
+		global.Logger.Error("两次输入密码不一致")
 		return
 	}
 
@@ -78,10 +76,10 @@ func CreateAdminUser() {
 	err = global.DB.Create(&newUser).Error
 	if err != nil {
 		fmt.Println("创建用户时出错")
-		logrus.Errorf("创建用户时出错: %v", err)
+		global.Logger.Errorf("创建用户时出错: %v", err)
 		return
 	}
 	
 	fmt.Println("创建用户成功")
-	logrus.Info("创建用户成功")
+	global.Logger.Info("创建用户成功")
 }

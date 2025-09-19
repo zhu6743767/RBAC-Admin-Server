@@ -6,30 +6,28 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"rbac.admin/config"
+	"rbac.admin/global"
 )
 
-var (
-	// RedisClient 全局Redis客户端
-	RedisClient *redis.Client
-	// RedisCtx 全局Redis上下文
-	RedisCtx = context.Background()
-)
+// RedisCtx 全局Redis上下文
+var RedisCtx = context.Background()
 
 // InitRedis 初始化Redis连接
 // 支持单节点模式
 // 配置连接池参数，Addr为空时跳过初始化
-func InitRedis(cfg *config.RedisConfig) error {
-	// 如果Redis地址为空，则跳过初始化
-	if cfg.Addr == "" {
-		fmt.Println("⚠️ Redis配置为空，跳过初始化")
+func InitRedis() error {
+	// 如果全局配置不存在或者Redis地址为空，则跳过初始化
+	if global.Config == nil || global.Config.Redis.Addr == "" {
+		global.Logger.Warn("Redis配置为空，跳过初始化")
 		return nil
 	}
+
+	cfg := global.Config.Redis
 
 	// 创建Redis客户端
 	client := redis.NewClient(&redis.Options{
 		Addr:     cfg.Addr,             // 服务器地址
-		Password: cfg.Password,         // 密码（使用正确的字段名）
+		Password: cfg.Password,         // 密码
 		DB:       cfg.DB,               // 数据库索引
 
 		// 连接池配置（使用配置文件中的值）
@@ -61,35 +59,31 @@ func InitRedis(cfg *config.RedisConfig) error {
 		return fmt.Errorf("Redis连接失败: %v", err)
 	}
 
-	RedisClient = client
+	// 设置全局Redis客户端
+	global.Redis = client
 
-	fmt.Printf("✅ Redis连接成功: %s, DB: %d\n", cfg.Addr, cfg.DB)
+	global.Logger.Info(fmt.Sprintf("Redis连接成功: %s, DB: %d", cfg.Addr, cfg.DB))
 
 	return nil
 }
 
 // CloseRedis 关闭Redis连接
 func CloseRedis() error {
-	if RedisClient != nil {
-		return RedisClient.Close()
+	if global.Redis != nil {
+		return global.Redis.Close()
 	}
 	return nil
 }
 
-// GetRedis 获取Redis客户端
-func GetRedis() *redis.Client {
-	return RedisClient
-}
-
 // RedisIsConnected 检查Redis是否连接成功
 func RedisIsConnected() bool {
-	if RedisClient == nil {
+	if global.Redis == nil {
 		return false
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	_, err := RedisClient.Ping(ctx).Result()
+	_, err := global.Redis.Ping(ctx).Result()
 	return err == nil
 }

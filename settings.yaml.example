@@ -1,0 +1,184 @@
+# RBAC Admin Server 配置文件示例
+# RBAC Admin Server 配置文件示例
+# 复制此文件并重命名为 settings_dev.yaml, settings_test.yaml 或 settings_prod.yaml 以用于不同环境
+
+# =======================================
+# 系统基础配置
+# =======================================
+system:
+  ip: "0.0.0.0"         # 服务器绑定IP，生产环境建议设置为具体IP
+  port: 8080            # 服务器监听端口
+  name: "RBAC Admin Server"  # 应用名称
+  version: "1.0.0"      # 应用版本号
+  timezone: "Asia/Shanghai"  # 时区设置
+
+# =======================================
+# 数据库配置
+# =======================================
+db:
+  mode: "mysql"         # 数据库类型: mysql, postgres, sqlite
+  host: "localhost"     # 数据库主机地址
+  port: 3306            # 数据库端口
+  user: "root"          # 数据库用户名
+  password: "${DB_PASSWORD}"  # 数据库密码，通过环境变量注入，更安全
+  dbname: "rbac_admin"  # 数据库名称
+  sslmode: "disable"    # SSL模式: disable, require, verify-ca, verify-full
+  timeout: "30s"        # 数据库连接超时时间
+  charset: "utf8mb4"    # 数据库字符集
+  collation: "utf8mb4_general_ci"  # 数据库排序规则
+  max_idle_conns: 10    # 最大空闲连接数
+  max_open_conns: 100   # 最大打开连接数
+  conn_max_lifetime: 60m  # 连接最大生命周期
+  conn_max_idle_time: 30m  # 连接最大空闲时间
+  path: "rbac_admin.db"  # SQLite数据库路径（仅SQLite模式有效）
+
+# =======================================
+# Redis缓存配置
+# =======================================
+redis:
+  addr: "localhost:6379"  # Redis服务器地址和端口
+  password: "${REDIS_PASSWORD}"  # Redis密码，通过环境变量注入
+  db: 0                 # Redis数据库索引
+  pool_size: 10         # Redis连接池大小
+  min_idle_conns: 5     # 最小空闲连接数
+  max_conn_age: 60m     # 连接最大存活时间
+  pool_timeout: 30s     # 连接池获取连接超时时间
+  idle_timeout: 30m     # 空闲连接超时时间
+  idle_check_frequency: 1m  # 空闲连接检查频率
+  read_timeout: 3s      # 读取超时时间
+  write_timeout: 3s     # 写入超时时间
+  dial_timeout: 3s      # 拨号超时时间
+  max_retries: 3        # 最大重试次数
+  min_retry_backoff: 100ms  # 最小重试退避时间
+  max_retry_backoff: 500ms  # 最大重试退避时间
+
+# =======================================
+# JWT认证配置
+# =======================================
+jwt:
+  secret: "${JWT_SECRET}"  # JWT密钥，至少32个字符，通过环境变量注入
+  expire_hours: 24      # JWT令牌有效期（小时）
+  refresh_expire_hours: 72  # 刷新令牌有效期（小时）
+  issuer: "RBAC Admin Server"  # 令牌颁发者
+  audience: "rbac-admin-users"  # 令牌受众
+  signing_method: "HS256"  # 签名方法
+  token_name: "Authorization"  # 令牌在请求头中的名称
+
+# =======================================
+# 日志系统配置
+# =======================================
+log:
+  level: "info"         # 日志级别: debug, info, warn, error, fatal, panic
+  dir: "logs"           # 日志目录
+  filename: "rbac_admin.log"  # 日志文件名
+  max_size: 100         # 单个日志文件最大大小（MB）
+  max_backups: 5        # 保留的最大日志文件数
+  max_age: 30           # 日志文件保留天数
+  compress: true        # 是否压缩日志文件
+  stdout: true          # 是否输出到标准输出
+  format: "text"        # 日志格式: text, json
+  output: "both"        # 日志输出方式: stdout, file, both
+  log_dir: "logs"       # 日志目录（与dir重复，保留兼容性）
+  enable_caller: true   # 是否记录调用者信息
+
+# =======================================
+# 安全配置
+# =======================================
+security:
+  cors_origins: ["*"]  # 允许的跨域源列表，生产环境建议设置为具体域名
+  csrf_secret: "${CSRF_SECRET}"  # CSRF密钥，通过环境变量注入
+  xss_protection: true  # 是否启用XSS保护
+  frame_options: "DENY"  # X-Frame-Options设置
+  content_security_policy: "default-src 'self'"  # 内容安全策略
+  rate_limit: 100       # 请求频率限制（每分钟）
+  brute_force_protection: true  # 是否启用暴力破解保护
+  password_complexity: 3  # 密码复杂度要求（1-5）
+  login_attempts_limit: 5  # 登录尝试次数限制
+  login_lockout_time: 30  # 登录锁定时间（分钟）
+  bcrypt_cost: 12       # bcrypt加密成本
+  max_login_attempts: 5  # 最大登录尝试次数
+  lock_duration_minutes: 30  # 锁定持续时间（分钟）
+  session_timeout: 24h  # 会话超时时间
+  api_key_header: "X-API-Key"  # API密钥请求头名称
+
+# =======================================
+# CORS配置
+# =======================================
+cors:
+  allow_origins: ["*"]  # 允许的源，生产环境建议设置为具体域名
+  allow_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]  # 允许的HTTP方法
+  allow_headers: ["*"]  # 允许的HTTP头
+  allow_credentials: true  # 是否允许凭证
+  expose_headers: []    # 暴露的HTTP头列表
+  max_age: 24h          # 预检请求缓存时间
+
+# =======================================
+# 性能优化配置
+# =======================================
+performance:
+  max_request_size: 10  # 最大请求大小（MB）
+  max_upload_size: "100M"  # 最大上传文件大小
+  request_timeout: 30s  # 请求处理超时时间
+  response_compression: true  # 是否启用响应压缩
+  gzip_level: 6         # GZIP压缩级别（1-9）
+  cache_control: "no-cache"  # Cache-Control头设置
+  etag: true            # 是否启用ETag
+  request_rate_limit: 100  # 请求速率限制（每秒）
+  burst_rate_limit: 200  # 突发请求限制
+  compression_level: 6  # 压缩级别（与gzip_level重复，保留兼容性）
+
+# =======================================
+# 文件上传配置
+# =======================================
+upload:
+  dir: "uploads"        # 上传文件保存目录
+  max_size: 100         # 最大文件大小（MB）
+  allowed_types: ["image/jpeg", "image/png", "application/pdf"]  # 允许的文件类型
+  file_permissions: 0644  # 文件权限
+  dir_permissions: 0755  # 目录权限
+  max_file_size: "100M"  # 最大文件大小（与max_size重复，保留兼容性）
+  storage_type: "local"  # 存储类型: local, oss, s3
+  storage_path: "uploads"  # 存储路径（与dir重复，保留兼容性）
+  max_files_per_request: 10  # 每次请求最多上传文件数
+
+# =======================================
+# 监控配置
+# =======================================
+monitoring:
+  enabled: true         # 是否启用监控
+  endpoint: "/metrics"  # 监控指标端点
+  prometheus_enabled: true  # 是否启用Prometheus
+  jaeger_enabled: false  # 是否启用Jaeger追踪
+
+# =======================================
+# API文档配置
+# =======================================
+swagger:
+  enabled: true         # 是否启用Swagger文档
+  path: "/swagger"      # Swagger文档访问路径
+  title: "RBAC Admin Server API"  # API文档标题
+  description: "RBAC权限管理系统API文档"  # API文档描述
+  version: "1.0.0"      # API版本
+  contact_name: "Admin"  # 联系人
+  contact_email: "admin@example.com"  # 联系邮箱
+
+# =======================================
+# 应用特定配置
+# =======================================
+app:
+  debug: false          # 是否启用调试模式（生产环境必须为false）
+  graceful_shutdown_timeout: 30s  # 优雅关闭超时时间
+  request_id: true      # 是否为每个请求生成唯一ID
+  trace_id: true        # 是否为每个请求生成跟踪ID
+
+# =======================================
+# 环境变量使用说明
+# =======================================
+# 配置文件中使用 ${ENV_VAR} 格式可以引用环境变量
+# 系统会自动从 .env 文件或系统环境变量中读取对应值
+# 推荐将敏感信息（如密码、密钥等）通过环境变量注入
+# 示例 .env 文件内容：
+# DB_PASSWORD=your_secure_password
+# REDIS_PASSWORD=your_secure_redis_password
+# JWT_SECRET=your_secure_jwt_secret_minimum_32_characters
+# CSRF_SECRET=your_secure_csrf_secret

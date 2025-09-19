@@ -4,9 +4,9 @@ import (
 	"rbac.admin/global"
 	"rbac.admin/models"
 	"rbac.admin/pwd"
+	"rbac.admin/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 // Login 用户登录
@@ -17,7 +17,8 @@ func Login(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"code": 400, "msg": "参数错误"})
+		global.Logger.Error("登录参数错误: " + err.Error())
+		c.JSON(400, gin.H{"code": utils.ERROR, "msg": "参数错误"})
 		return
 	}
 
@@ -25,30 +26,46 @@ func Login(c *gin.Context) {
 	var user models.User
 	err := global.DB.Where("username = ?", req.Username).First(&user).Error
 	if err != nil {
-		c.JSON(401, gin.H{"code": 401, "msg": "用户名或密码错误"})
+		global.Logger.Error("用户不存在: " + req.Username)
+		c.JSON(401, gin.H{"code": utils.ERROR_USER_NOT_EXIST, "msg": utils.GetErrMsg(utils.ERROR_USER_NOT_EXIST)})
 		return
 	}
 
 	// 检查用户状态
 	if user.Status != 1 {
-		c.JSON(401, gin.H{"code": 401, "msg": "用户已被禁用"})
+		global.Logger.Error("用户已被禁用: " + req.Username)
+		c.JSON(401, gin.H{"code": utils.ERROR, "msg": "用户已被禁用"})
 		return
 	}
 
 	// 验证密码
 	if !pwd.ComparePassword(user.Password, req.Password) {
-		c.JSON(401, gin.H{"code": 401, "msg": "用户名或密码错误"})
+		global.Logger.Error("密码验证失败: " + req.Username)
+		c.JSON(401, gin.H{"code": utils.ERROR_PASSWORD_WRONG, "msg": utils.GetErrMsg(utils.ERROR_PASSWORD_WRONG)})
 		return
 	}
 
-	// 生成token
-	token, err := global.GenerateToken(user.ID)
+	// 获取用户角色列表
+	roleList, err := global.GetUserRoles(user.ID)
 	if err != nil {
-		logrus.Error("生成token失败: ", err)
+		global.Logger.Error("获取用户角色失败: " + err.Error())
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}
 
+	// 生成token
+	token, err := global.GenerateToken(global.ClaimsUserInfo{
+		UserID:   user.ID,
+		Username: user.Username,
+		RoleList: roleList,
+	})
+	if err != nil {
+		global.Logger.Error("生成token失败: ", err)
+		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
+		return
+	}
+
+	global.Logger.Infof("用户登录成功: %s", user.Username)
 	c.JSON(200, gin.H{
 		"code": 200,
 		"msg":  "登录成功",
@@ -98,7 +115,7 @@ func Register(c *gin.Context) {
 	}
 
 	if err := global.DB.Create(&user).Error; err != nil {
-		logrus.Error("创建用户失败: ", err)
+		global.Logger.Error("创建用户失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}
@@ -137,7 +154,7 @@ func GetUserList(c *gin.Context) {
 
 	offset := (req.Page - 1) * req.PageSize
 	if err := query.Offset(offset).Limit(req.PageSize).Find(&users).Error; err != nil {
-		logrus.Error("获取用户列表失败: ", err)
+		global.Logger.Error("获取用户列表失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}
@@ -196,7 +213,7 @@ func CreateUser(c *gin.Context) {
 	}
 
 	if err := global.DB.Create(&user).Error; err != nil {
-		logrus.Error("创建用户失败: ", err)
+		global.Logger.Error("创建用户失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}
@@ -232,7 +249,7 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	if err := global.DB.Model(&models.User{}).Where("id = ?", req.ID).Updates(updates).Error; err != nil {
-		logrus.Error("更新用户失败: ", err)
+		global.Logger.Error("更新用户失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}
@@ -252,10 +269,44 @@ func DeleteUser(c *gin.Context) {
 	}
 
 	if err := global.DB.Delete(&models.User{}, req.ID).Error; err != nil {
-		logrus.Error("删除用户失败: ", err)
+		global.Logger.Error("删除用户失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}
 
 	c.JSON(200, gin.H{"code": 200, "msg": "删除成功"})
 }
+
+// RefreshToken 刷新令牌
+func RefreshToken(c *gin.Context) {
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(401, gin.H{
+			"code": 401,
+			"msg": "请提供token",
+		})
+		return
+	}
+
+	// 移除可能的Bearer前缀
+	if len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
+	}
+
+	newToken, err := global.RefreshToken(token)
+	if err != nil {
+		global.Logger.Warnf("刷新token失败: %s", err.Error())
+		c.JSON(401, gin.H{
+			"code": 401,
+			"msg": "刷新失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 200,
+		"msg": "刷新成功",
+		"data": gin.H{
+			"token": newToken,
+		},
+	})

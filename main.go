@@ -5,17 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/sirupsen/logrus"
 	"rbac.admin/config"
 	"rbac.admin/core"
 	"rbac.admin/global"
-	"rbac.admin/models"
-	"rbac.admin/pwd"
 	"rbac.admin/routes"
-
-	gormadapter "github.com/casbin/gorm-adapter/v3"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 var (
@@ -28,10 +25,23 @@ var (
 func main() {
 	flag.Parse()
 
-	// 初始化系统
-	if err := core.InitSystem(loadConfig()); err != nil {
-		fmt.Printf("系统初始化失败: %v\n", err)
-		os.Exit(1)
+	// 加载配置文件
+	cfg, err := loadConfig()
+	if err != nil {
+		logrus.Fatalf("加载配置文件失败: %v", err)
+	}
+	
+	// 初始化全局日志系统
+	if err := core.InitLogger(&cfg.Log); err != nil {
+		logrus.Fatalf("初始化日志系统失败: %v", err)
+	}
+	
+	// 设置全局配置
+	global.Config = cfg
+
+	// 初始化核心系统组件
+	if err := core.InitSystem(); err != nil {
+		global.Logger.Fatalf("系统初始化失败: %v", err)
 	}
 
 	// 处理命令行参数
@@ -40,12 +50,12 @@ func main() {
 		return
 	}
 
-	// 启动服务器
+	// 启动HTTP服务器
 	startServer()
 }
 
 // loadConfig 加载配置
-func loadConfig() *config.Config {
+func loadConfig() (*config.Config, error) {
 	var configFile string
 	if *configPath != "" {
 		configFile = *configPath
@@ -53,12 +63,7 @@ func loadConfig() *config.Config {
 		configFile = fmt.Sprintf("settings_%s.yaml", *env)
 	}
 	
-	cfg, err := config.Load(configFile)
-	if err != nil {
-		fmt.Printf("加载配置文件失败: %v\n", err)
-		os.Exit(1)
-	}
-	return cfg
+	return config.Load(configFile)
 }
 
 // handleCommand 处理命令行参数
@@ -185,16 +190,16 @@ func migrateDatabase() {
 
 // startServer 启动服务器
 func startServer() {
-	logrus.Info("开始启动服务器...")
+	global.Logger.Info("开始启动服务器...")
 
 	// 检查配置是否为空
 	if global.Config == nil {
-		logrus.Fatal("全局配置为空")
+		global.Logger.Fatal("全局配置为空")
 	}
 
 	// 检查系统配置是否为空
 	if global.Config.System.Port == 0 {
-		logrus.Fatal("系统端口配置为0")
+		global.Logger.Fatal("系统端口配置为0")
 	}
 
 	// 启动HTTP服务器
@@ -203,10 +208,39 @@ func startServer() {
 	// 设置路由
 	router := routes.SetupRouter()
 	
-	logrus.Infof("🎉 服务器启动成功，监听地址: %s", addr)
-	
-	// 启动HTTP服务器
-	if err := http.ListenAndServe(addr, router); err != nil {
-		logrus.Fatalf("服务器启动失败: %v", err)
+	// 创建HTTP服务器
+	server := &http.Server{
+		Addr:    addr,
+		Handler: router,
 	}
+	
+	// 启动服务器的goroutine
+	go func() {
+		global.Logger.Infof("🎉 服务器启动成功，监听地址: %s", addr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			global.Logger.Fatalf("服务器启动失败: %v", err)
+		}
+	}()
+	
+	// 优雅关闭
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	global.Logger.Info("正在优雅关闭服务器...")
+	
+	// 关闭Redis连接
+	if global.Redis != nil {
+		if err := global.Redis.Close(); err != nil {
+			global.Logger.Errorf("关闭Redis连接失败: %v", err)
+		} else {
+			global.Logger.Info("Redis连接已关闭")
+		}
+	}
+	
+	// 关闭HTTP服务器
+	if err := server.Shutdown(nil); err != nil {
+		global.Logger.Fatalf("服务器强制关闭: %v", err)
+	}
+	
+	global.Logger.Info("服务器已优雅关闭")
 }

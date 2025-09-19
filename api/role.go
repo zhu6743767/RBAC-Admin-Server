@@ -5,7 +5,6 @@ import (
 	"rbac.admin/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 // GetRoleList 获取角色列表
@@ -38,7 +37,7 @@ func GetRoleList(c *gin.Context) {
 
 	offset := (req.Page - 1) * req.PageSize
 	if err := query.Offset(offset).Limit(req.PageSize).Find(&roles).Error; err != nil {
-		logrus.Error("获取角色列表失败: ", err)
+		global.Logger.Error("获取角色列表失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}
@@ -84,7 +83,7 @@ func CreateRole(c *gin.Context) {
 	}
 
 	if err := global.DB.Create(&role).Error; err != nil {
-		logrus.Error("创建角色失败: ", err)
+		global.Logger.Error("创建角色失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}
@@ -114,7 +113,7 @@ func UpdateRole(c *gin.Context) {
 	}
 
 	if err := global.DB.Model(&models.Role{}).Where("id = ?", req.ID).Updates(updates).Error; err != nil {
-		logrus.Error("更新角色失败: ", err)
+		global.Logger.Error("更新角色失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}
@@ -134,7 +133,7 @@ func DeleteRole(c *gin.Context) {
 	}
 
 	if err := global.DB.Delete(&models.Role{}, req.ID).Error; err != nil {
-		logrus.Error("删除角色失败: ", err)
+		global.Logger.Error("删除角色失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}

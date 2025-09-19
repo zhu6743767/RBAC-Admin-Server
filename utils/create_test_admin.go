@@ -8,8 +8,6 @@ import (
 	"rbac.admin/global"
 	"rbac.admin/models"
 	"rbac.admin/pwd"
-
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -40,7 +38,7 @@ func createTestAdmin() {
 	err := global.DB.Where("username = ?", username).First(&user).Error
 	if err == nil {
 		fmt.Printf("用户 %s 已存在\n", username)
-		logrus.Info("用户已存在")
+		global.Logger.Info("用户已存在")
 		return
 	}
 	
@@ -59,12 +57,12 @@ func createTestAdmin() {
 	err = global.DB.Create(&newUser).Error
 	if err != nil {
 		fmt.Printf("创建用户失败: %v\n", err)
-		logrus.Errorf("创建用户失败: %v", err)
+		global.Logger.Errorf("创建用户失败: %v", err)
 		return
 	}
 	
 	fmt.Printf("管理员用户 %s 创建成功！\n", username)
 	fmt.Printf("用户名: %s\n", username)
 	fmt.Printf("密码: %s\n", password)
-	logrus.Info("创建用户成功")
+	global.Logger.Info("创建用户成功")
 }

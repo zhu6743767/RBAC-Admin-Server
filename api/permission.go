@@ -5,7 +5,6 @@ import (
 	"rbac.admin/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 // GetPermissionList 获取权限列表
@@ -38,7 +37,7 @@ func GetPermissionList(c *gin.Context) {
 
 	offset := (req.Page - 1) * req.PageSize
 	if err := query.Offset(offset).Limit(req.PageSize).Find(&permissions).Error; err != nil {
-		logrus.Error("获取权限列表失败: ", err)
+		global.Logger.Error("获取权限列表失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}
@@ -84,7 +83,7 @@ func CreatePermission(c *gin.Context) {
 	}
 
 	if err := global.DB.Create(&permission).Error; err != nil {
-		logrus.Error("创建权限失败: ", err)
+		global.Logger.Error("创建权限失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}
@@ -114,7 +113,7 @@ func UpdatePermission(c *gin.Context) {
 	}
 
 	if err := global.DB.Model(&models.Permission{}).Where("id = ?", req.ID).Updates(updates).Error; err != nil {
-		logrus.Error("更新权限失败: ", err)
+		global.Logger.Error("更新权限失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}
@@ -134,7 +133,7 @@ func DeletePermission(c *gin.Context) {
 	}
 
 	if err := global.DB.Delete(&models.Permission{}, req.ID).Error; err != nil {
-		logrus.Error("删除权限失败: ", err)
+		global.Logger.Error("删除权限失败: ", err)
 		c.JSON(500, gin.H{"code": 500, "msg": "系统错误"})
 		return
 	}

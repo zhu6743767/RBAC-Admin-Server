@@ -3,89 +3,92 @@ package middleware
 import (
 	"net/http"
 	"rbac.admin/global"
-	"rbac.admin/models"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 // Cors 跨域中间件
+// 允许跨域请求，设置必要的HTTP头
 func Cors() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		method := c.Request.Method
-		origin := c.Request.Header.Get("Origin")
-		if origin != "" {
-			c.Header("Access-Control-Allow-Origin", origin)
-			c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
-			c.Header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
-			c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Cache-Control, Content-Language, Content-Type")
-			c.Header("Access-Control-Allow-Credentials", "true")
+		h := c.Writer.Header()
+		h.Set("Access-Control-Allow-Origin", "*")
+		h.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
+		h.Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
+		h.Set("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Cache-Control, Content-Language, Content-Type")
+		h.Set("Access-Control-Allow-Credentials", "true")
+
+		// 处理 OPTIONS 请求
+		if c.Request.Method == "OPTIONS" {
+			c.Status(http.StatusOK)
+			c.Abort()
+			return
 		}
-		if method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-		}
+
 		c.Next()
 	}
 }
 
 // Auth 认证中间件
+// 验证JWT token的有效性，并将用户信息存入上下文
 func Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 获取token
 		token := c.GetHeader("Authorization")
 		if token == "" {
-			c.JSON(401, gin.H{"code": 401, "msg": "未登录"})
+			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "请先登录"})
 			c.Abort()
 			return
 		}
 
-		// 验证token
-		token = strings.Replace(token, "Bearer ", "", 1)
+		// 移除 Bearer 前缀
+		if len(token) > 7 && token[:7] == "Bearer " {
+			token = token[7:]
+		}
+
 		claims, err := global.ParseToken(token)
 		if err != nil {
-			c.JSON(401, gin.H{"code": 401, "msg": "token无效"})
+			global.Logger.Warnf("Token解析失败: %s", err.Error())
+			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "token 无效"})
 			c.Abort()
 			return
 		}
 
-		// 获取用户信息
-		var user models.User
-		err = global.DB.Where("id = ?", claims.UserID).First(&user).Error
-		if err != nil {
-			c.JSON(401, gin.H{"code": 401, "msg": "用户不存在"})
-			c.Abort()
-			return
-		}
-
-		// 检查用户状态
-		if user.Status != 1 {
-			c.JSON(401, gin.H{"code": 401, "msg": "用户已被禁用"})
-			c.Abort()
-			return
-		}
-
-		// 将用户信息保存到上下文
-		c.Set("user", user)
-		c.Set("user_id", user.ID)
+		// 将用户信息存入上下文
+		c.Set("userID", claims.UserID)
+		c.Set("username", claims.Username)
+		c.Set("roleList", claims.RoleList)
+		global.Logger.Debugf("用户认证成功: %s, 角色: %v", claims.Username, claims.RoleList)
 		c.Next()
 	}
 }
 
-// Admin 管理员权限中间件
+// Admin 管理员中间件
+// 验证用户是否具有管理员权限
 func Admin() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, exists := c.Get("user")
+		userID, exists := c.Get("userID")
 		if !exists {
-			c.JSON(403, gin.H{"code": 403, "msg": "未登录"})
+			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "请先登录"})
 			c.Abort()
 			return
 		}
 
-		u := user.(models.User)
-		if !u.IsAdmin {
-			c.JSON(403, gin.H{"code": 403, "msg": "无权限"})
+		// 查询用户信息
+		var user struct {
+			IsAdmin bool
+		}
+		if err := global.DB.Table("users").Where("id = ?", userID).First(&user).Error; err != nil {
+			global.Logger.Error("查询用户信息失败: " + err.Error())
+			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "用户不存在"})
+			c.Abort()
+			return
+		}
+
+		if !user.IsAdmin {
+			global.Logger.Warnf("用户ID: %v 尝试访问管理员资源但无权限", userID)
+			c.JSON(http.StatusForbidden, gin.H{"code": 403, "msg": "无管理员权限"})
 			c.Abort()
 			return
 		}
@@ -112,7 +115,7 @@ func Logger() gin.HandlerFunc {
 			path = path + "?" + raw
 		}
 
-		logrus.Infof("[%s] %s %s %d %v",
+		global.Logger.Infof("[%s] %s %s %d %v",
 			clientIP,
 			method,
 			path,

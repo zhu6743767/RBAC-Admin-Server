@@ -10,6 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"rbac.admin/config"
+	"rbac.admin/global"
 )
 
 // InitLogger 初始化日志系统
@@ -69,7 +70,14 @@ func InitLogger(cfg *config.LogConfig) error {
 	// 设置日志选项
 	logrus.SetReportCaller(cfg.EnableCaller)
 
-	logrus.Info("✅ 日志系统初始化成功")
+	// 创建新的logrus实例并应用相同的配置
+	global.Logger = logrus.New()
+	global.Logger.SetLevel(level)
+	global.Logger.SetFormatter(logrus.StandardLogger().Formatter)
+	global.Logger.SetOutput(logrus.StandardLogger().Out)
+	global.Logger.SetReportCaller(cfg.EnableCaller)
+
+	global.Logger.Info("✅ 日志系统初始化成功")
 	return nil
 }
 

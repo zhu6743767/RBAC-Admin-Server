@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 	"rbac.admin/config"
+	"rbac.admin/global"
 
 	// 纯Go SQLite驱动，无需CGO
 	glebarezsqlite "github.com/glebarez/sqlite"
@@ -27,6 +28,11 @@ var (
 // 自动配置连接池参数，支持日志级别设置
 func InitGorm(cfg *config.DBConfig) error {
 	var dialector gorm.Dialector
+
+	// 验证配置
+	if cfg == nil {
+		return fmt.Errorf("数据库配置为空")
+	}
 
 	// 根据数据库类型选择驱动
 	switch cfg.Mode {
@@ -80,12 +86,16 @@ func InitGorm(cfg *config.DBConfig) error {
 	DB = db
 	SQLDB = sqlDB
 
-	// 日志输出连接信息
+	// 日志输出连接信息（使用全局日志系统）
 	if cfg.Mode == "sqlite" {
-		fmt.Printf("✅ 数据库连接成功: SQLite @ %s\n", cfg.Path)
+		global.Logger.Infof("✅ 数据库连接成功: SQLite @ %s", cfg.Path)
 	} else {
-		fmt.Printf("✅ 数据库连接成功: %s@%s:%d/%s\n", cfg.User, cfg.Host, cfg.Port, cfg.DbNAME)
+		global.Logger.Infof("✅ 数据库连接成功: %s@%s:%d/%s", cfg.User, cfg.Host, cfg.Port, cfg.DbNAME)
 	}
+
+	// 记录连接池配置
+	global.Logger.Infof("🔧 数据库连接池配置: MaxIdleConns=%d, MaxOpenConns=%d, MaxLifetime=%v, MaxIdleTime=%v",
+		cfg.MaxIdleConns, cfg.MaxOpenConns, cfg.ConnMaxLifetime, cfg.ConnMaxIdleTime)
 
 	return nil
 }

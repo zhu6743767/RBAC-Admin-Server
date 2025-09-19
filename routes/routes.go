@@ -26,6 +26,7 @@ func SetupRouter() *gin.Engine {
 		{
 			publicGroup.POST("/login", api.Login)
 			publicGroup.POST("/register", api.Register)
+			publicGroup.POST("/refresh-token", api.RefreshToken)
 		}
 
 		// 需要认证的路由
