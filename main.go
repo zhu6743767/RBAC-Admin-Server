@@ -8,11 +8,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/howeyc/gopass"
 	"github.com/sirupsen/logrus"
 	"rbac.admin/config"
 	"rbac.admin/core"
 	"rbac.admin/global"
+	"rbac.admin/models"
 	"rbac.admin/routes"
+	"rbac.admin/utils"
 )
 
 var (
@@ -120,7 +123,7 @@ func createAdminUser() {
 	}
 
 	fmt.Println("请输入密码")
-	password, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	password, err := gopass.GetPasswdMasked()
 	if err != nil {
 		fmt.Println("读取密码失败")
 		os.Exit(1)
@@ -133,7 +136,7 @@ func createAdminUser() {
 	}
 
 	fmt.Println("请再次输入密码")
-	rePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	rePassword, err := gopass.GetPasswdMasked()
 	if err != nil {
 		fmt.Println("读取密码失败")
 		os.Exit(1)
@@ -146,101 +149,68 @@ func createAdminUser() {
 	}
 
 	// 密码加密
-	hashPwd := pwd.HashedPassword(string(password))
+	hashPwd := utils.HashedPassword(string(password))
 
-	// 创建管理员用户
-	err = global.DB.Create(&models.User{
+	// 创建用户
+	newUser := models.User{
 		Username: username,
 		Password: hashPwd,
 		Nickname: "管理员",
+		Avatar:   "/default-avatar.png",
+		Email:    "",
+		Phone:    "",
 		Status:   1,
 		IsAdmin:  true,
-	}).Error
-	if err != nil {
+	}
+
+	if err := global.DB.Create(&newUser).Error; err != nil {
 		fmt.Printf("创建用户失败: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("创建用户成功")
-	os.Exit(0)
+	fmt.Println("管理员用户创建成功")
 }
 
 // migrateDatabase 数据库迁移
 func migrateDatabase() {
-	fmt.Println("开始数据库迁移...")
-	err := global.DB.AutoMigrate(
-		&models.User{},
-		&models.Role{},
-		&models.Permission{},
-		&models.UserRole{},
-		&models.RolePermission{},
-		&models.Department{},
-		&models.Menu{},
-		&models.File{},
-		&models.Log{},
-		&gormadapter.CasbinRule{},
-	)
-	if err != nil {
+	fmt.Println("开始执行数据库迁移...")
+
+	// 执行自动迁移
+	if err := core.AutoMigrateModels(); err != nil {
 		fmt.Printf("数据库迁移失败: %v\n", err)
 		os.Exit(1)
 	}
+
 	fmt.Println("数据库迁移成功")
-	os.Exit(0)
 }
 
-// startServer 启动服务器
+// startServer 启动HTTP服务器
 func startServer() {
-	global.Logger.Info("开始启动服务器...")
-
-	// 检查配置是否为空
-	if global.Config == nil {
-		global.Logger.Fatal("全局配置为空")
-	}
-
-	// 检查系统配置是否为空
-	if global.Config.System.Port == 0 {
-		global.Logger.Fatal("系统端口配置为0")
-	}
-
-	// 启动HTTP服务器
-	addr := fmt.Sprintf("%s:%d", global.Config.System.IP, global.Config.System.Port)
-	
-	// 设置路由
+	// 设置HTTP服务器
 	router := routes.SetupRouter()
-	
-	// 创建HTTP服务器
+
 	server := &http.Server{
-		Addr:    addr,
+		Addr:    fmt.Sprintf("%s:%d", global.Config.System.IP, global.Config.System.Port),
 		Handler: router,
 	}
-	
-	// 启动服务器的goroutine
+
+	// 启动服务器（异步）
 	go func() {
-		global.Logger.Infof("🎉 服务器启动成功，监听地址: %s", addr)
+		global.Logger.Infof("🚀 服务器启动成功，访问地址: http://%s:%d", global.Config.System.IP, global.Config.System.Port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			global.Logger.Fatalf("服务器启动失败: %v", err)
 		}
 	}()
-	
-	// 优雅关闭
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	global.Logger.Info("正在优雅关闭服务器...")
-	
-	// 关闭Redis连接
-	if global.Redis != nil {
-		if err := global.Redis.Close(); err != nil {
-			global.Logger.Errorf("关闭Redis连接失败: %v", err)
-		} else {
-			global.Logger.Info("Redis连接已关闭")
-		}
-	}
-	
-	// 关闭HTTP服务器
-	if err := server.Shutdown(nil); err != nil {
-		global.Logger.Fatalf("服务器强制关闭: %v", err)
-	}
-	
+
+	// 等待系统信号，优雅关闭
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	global.Logger.Info("开始优雅关闭服务器...")
+
+	// 清理系统资源
+	core.CleanupSystem()
+
 	global.Logger.Info("服务器已优雅关闭")
 }

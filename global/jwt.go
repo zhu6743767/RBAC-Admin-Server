@@ -39,7 +39,6 @@ func GenerateToken(info ClaimsUserInfo) (string, error) {
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    Config.JWT.Issuer,
-			Audience:  jwt.ClaimStrings{Config.JWT.Audience},
 		},
 	}
 

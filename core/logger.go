@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,25 +45,14 @@ func InitLogger(cfg *config.LogConfig) error {
 	}
 
 	// 设置日志输出
-	switch strings.ToLower(cfg.Output) {
-	case "stdout":
+	if cfg.Stdout {
 		logrus.SetOutput(os.Stdout)
-	case "file":
+	} else {
 		fileWriter, err := createLogFileWriter(cfg)
 		if err != nil {
 			return fmt.Errorf("创建日志文件写入器失败: %v", err)
 		}
 		logrus.SetOutput(fileWriter)
-	case "both":
-		fileWriter, err := createLogFileWriter(cfg)
-		if err != nil {
-			return fmt.Errorf("创建日志文件写入器失败: %v", err)
-		}
-		// 同时输出到控制台和文件
-		multiWriter := io.MultiWriter(os.Stdout, fileWriter)
-		logrus.SetOutput(multiWriter)
-	default:
-		logrus.SetOutput(os.Stdout)
 	}
 
 	// 设置日志选项
@@ -85,7 +73,7 @@ func InitLogger(cfg *config.LogConfig) error {
 // 支持按日期创建日志目录，自动创建不存在的目录
 func createLogFileWriter(cfg *config.LogConfig) (*os.File, error) {
 	// 创建日志目录
-	logDir := cfg.LogDir
+	logDir := cfg.Dir
 	if logDir == "" {
 		logDir = "./logs"
 	}

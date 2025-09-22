@@ -3,7 +3,6 @@ package middleware
 import (
 	"net/http"
 	"rbac.admin/global"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"

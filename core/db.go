@@ -3,6 +3,7 @@ package core
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
@@ -75,8 +76,7 @@ func InitGorm(cfg *config.DBConfig) error {
 	// 设置连接池参数（使用配置文件中的值）
 	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
 	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
-	sqlDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
-	sqlDB.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
+	sqlDB.SetConnMaxLifetime(time.Duration(cfg.ConnMaxLifetime) * time.Hour)
 
 	// 测试连接
 	if err := sqlDB.Ping(); err != nil {
@@ -94,8 +94,8 @@ func InitGorm(cfg *config.DBConfig) error {
 	}
 
 	// 记录连接池配置
-	global.Logger.Infof("🔧 数据库连接池配置: MaxIdleConns=%d, MaxOpenConns=%d, MaxLifetime=%v, MaxIdleTime=%v",
-		cfg.MaxIdleConns, cfg.MaxOpenConns, cfg.ConnMaxLifetime, cfg.ConnMaxIdleTime)
+	global.Logger.Infof("🔧 数据库连接池配置: MaxIdleConns=%d, MaxOpenConns=%d, MaxLifetime=%v",
+		cfg.MaxIdleConns, cfg.MaxOpenConns, time.Duration(cfg.ConnMaxLifetime)*time.Hour)
 
 	return nil
 }
@@ -112,33 +112,20 @@ func buildMysqlDSN(cfg *config.DBConfig) string {
 	// 默认使用utf8mb4_general_ci排序规则
 	dsn += "&collation=utf8mb4_general_ci"
 
-	// 添加SSL模式
-	if cfg.SSLMode != "" {
-		dsn += fmt.Sprintf("&tls=%s", cfg.SSLMode)
-	}
-
-	// 添加连接超时
-	if cfg.Timeout != "" {
-		dsn += fmt.Sprintf("&timeout=%s", cfg.Timeout)
-	}
+	// 添加SSL模式（使用默认设置）
+	dsn += "&tls=false"
 
 	return dsn
 }
 
 // buildPostgresDSN 构建PostgreSQL连接字符串
 func buildPostgresDSN(cfg *config.DBConfig) string {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
 		cfg.Host,
 		cfg.User,
 		cfg.Password, // 使用正确的字段名
 		cfg.DbNAME,   // 使用正确的字段名
-		cfg.Port,
-		cfg.SSLMode)
-
-	// 添加连接超时
-	if cfg.Timeout != "" {
-		dsn += fmt.Sprintf(" connect_timeout=%s", cfg.Timeout)
-	}
+		cfg.Port)
 
 	return dsn
 }

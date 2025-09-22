@@ -28,41 +28,43 @@ func Load(filename string) (*Config, error) {
 	// 首先尝试加载 .env 文件
 	_ = godotenv.Load()
 
-	// 读取配置文件
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("读取配置文件失败: %w", err)
-	}
+	// 获取默认配置
+	cfg := DefaultConfig()
 
-	// 替换环境变量占位符
-	content := string(data)
-	content = replaceEnvVars(content)
+	// 如果指定了配置文件，读取并解析
+	if filename != "" {
+		// 读取配置文件
+		data, err := os.ReadFile(filename)
+		if err != nil {
+			return nil, fmt.Errorf("读取配置文件失败: %w", err)
+		}
 
-	// 解析YAML配置
-	var cfg Config
-	if err := yaml.Unmarshal([]byte(content), &cfg); err != nil {
-		return nil, fmt.Errorf("解析配置文件失败: %w", err)
+		// 替换环境变量占位符
+		content := string(data)
+		content = replaceEnvVars(content)
+
+		// 解析YAML配置
+		if err := yaml.Unmarshal([]byte(content), &cfg); err != nil {
+			return nil, fmt.Errorf("解析配置文件失败: %w", err)
+		}
 	}
 
 	// 应用环境变量
-	applyEnvironmentVariables(&cfg)
-
-	// 应用默认值
-	applyDefaults(&cfg)
+	applyEnvironmentVariables(cfg)
 
 	// 验证配置
-	if err := validateConfig(&cfg); err != nil {
+	if err := validateConfig(cfg); err != nil {
 		return nil, fmt.Errorf("配置验证失败: %w", err)
 	}
 
-	return &cfg, nil
+	return cfg, nil
 }
 
 // replaceEnvVars 替换配置文件中的环境变量占位符
 func replaceEnvVars(content string) string {
 	// 替换 ${VAR_NAME} 格式的环境变量
 	for {
-		start := strings.Index(content, "${")
+		start := strings.Index(content, "$")
 		if start == -1 {
 			break
 		}
@@ -101,150 +103,9 @@ func getEnvFromFile(key string) string {
 	return ""
 }
 
-// applyDefaults 应用默认值
+// applyDefaults 应用默认值（保留函数结构，但使用DefaultConfig）
 func applyDefaults(cfg *Config) {
-	if cfg.System.Port == 0 {
-		cfg.System.Port = 8080
-	}
-	if cfg.System.IP == "" {
-		cfg.System.IP = "127.0.0.1"
-	}
-
-	if cfg.DB.Mode == "" {
-		cfg.DB.Mode = "sqlite"
-	}
-	if cfg.DB.Port == 0 {
-		cfg.DB.Port = 3306
-	}
-	if cfg.DB.MaxOpenConns == 0 {
-		cfg.DB.MaxOpenConns = 100
-	}
-	if cfg.DB.MaxIdleConns == 0 {
-		cfg.DB.MaxIdleConns = 10
-	}
-	if cfg.DB.ConnMaxLifetime == 0 {
-		cfg.DB.ConnMaxLifetime = 1 * time.Hour
-	}
-	if cfg.DB.ConnMaxIdleTime == 0 {
-		cfg.DB.ConnMaxIdleTime = 30 * time.Minute
-	}
-
-	if cfg.DB.Timeout == "" {
-		cfg.DB.Timeout = "30s"
-	}
-
-	if cfg.JWT.ExpireHours == 0 {
-		cfg.JWT.ExpireHours = 24
-	}
-	if cfg.JWT.RefreshExpireHours == 0 {
-		cfg.JWT.RefreshExpireHours = 168
-	}
-	if cfg.JWT.Issuer == "" {
-		cfg.JWT.Issuer = "rbac-admin-server"
-	}
-	if cfg.JWT.Audience == "" {
-		cfg.JWT.Audience = "rbac-client"
-	}
-
-	// Redis配置可选，不设置默认值
-
-	if cfg.Log.Level == "" {
-		cfg.Log.Level = "info"
-	}
-	if cfg.Log.Format == "" {
-		cfg.Log.Format = "text"
-	}
-	if cfg.Log.Output == "" {
-		cfg.Log.Output = "both"
-	}
-	if cfg.Log.LogDir == "" {
-		cfg.Log.LogDir = "./logs"
-	}
-	if cfg.Log.MaxSize == 0 {
-		cfg.Log.MaxSize = 100
-	}
-	if cfg.Log.MaxAge == 0 {
-		cfg.Log.MaxAge = 7
-	}
-	if cfg.Log.MaxBackups == 0 {
-		cfg.Log.MaxBackups = 3
-	}
-
-	if cfg.Performance.MaxUploadSize == "" {
-		cfg.Performance.MaxUploadSize = "10MB"
-	}
-	if cfg.Performance.RequestRateLimit == 0 {
-		cfg.Performance.RequestRateLimit = 100
-	}
-	if cfg.Performance.BurstRateLimit == 0 {
-		cfg.Performance.BurstRateLimit = 200
-	}
-	if cfg.Performance.CompressionLevel == 0 {
-		cfg.Performance.CompressionLevel = 6
-	}
-
-	if cfg.Upload.MaxFileSize == "" {
-		cfg.Upload.MaxFileSize = "10MB"
-	}
-	if cfg.Upload.StorageType == "" {
-		cfg.Upload.StorageType = "local"
-	}
-	if cfg.Upload.StoragePath == "" {
-		cfg.Upload.StoragePath = "./uploads"
-	}
-	if cfg.Upload.MaxFilesPerRequest == 0 {
-		cfg.Upload.MaxFilesPerRequest = 5
-	}
-
-	if cfg.Monitoring.HealthCheckPath == "" {
-		cfg.Monitoring.HealthCheckPath = "/health"
-	}
-	if cfg.Monitoring.MetricsPath == "" {
-		cfg.Monitoring.MetricsPath = "/metrics"
-	}
-
-	if cfg.CORS.MaxAge == 0 {
-		cfg.CORS.MaxAge = 12 * time.Hour
-	}
-
-	if cfg.Security.BcryptCost == 0 {
-		cfg.Security.BcryptCost = 10
-	}
-	if cfg.Security.MaxLoginAttempts == 0 {
-		cfg.Security.MaxLoginAttempts = 5
-	}
-	if cfg.Security.LockDurationMinutes == 0 {
-		cfg.Security.LockDurationMinutes = 30
-	}
-	if cfg.Security.SessionTimeout == 0 {
-		cfg.Security.SessionTimeout = 2 * time.Hour
-	}
-	if cfg.Security.APIKeyHeader == "" {
-		cfg.Security.APIKeyHeader = "X-API-Key"
-	}
-
-	if cfg.Swagger.Title == "" {
-		cfg.Swagger.Title = "RBAC管理员API"
-	}
-	if cfg.Swagger.Version == "" {
-		cfg.Swagger.Version = "1.0.0"
-	}
-	if cfg.Swagger.Host == "" {
-		cfg.Swagger.Host = "localhost:8080"
-	}
-	if cfg.Swagger.BasePath == "" {
-		cfg.Swagger.BasePath = "/api/v1"
-	}
-
-	if cfg.App.Name == "" {
-		cfg.App.Name = "RBAC管理员"
-	}
-	if cfg.App.Version == "" {
-		cfg.App.Version = "1.0.0"
-	}
-	if cfg.App.Environment == "" {
-		cfg.App.Environment = "development"
-	}
+	// 默认值已在DefaultConfig()中设置，这里可以保留一些特定的覆盖逻辑
 }
 
 // validateConfig 验证配置有效性
@@ -282,6 +143,9 @@ func applyEnvironmentVariables(cfg *Config) {
 		if p, err := strconv.Atoi(port); err == nil {
 			cfg.System.Port = p
 		}
+	}
+	if mode := os.Getenv("SYSTEM_MODE"); mode != "" {
+		cfg.System.Mode = mode
 	}
 
 	// 数据库配置
@@ -324,16 +188,8 @@ func applyEnvironmentVariables(cfg *Config) {
 			cfg.JWT.ExpireHours = h
 		}
 	}
-	if refreshExpire := os.Getenv("JWT_REFRESH_EXPIRE_HOURS"); refreshExpire != "" {
-		if h, err := strconv.Atoi(refreshExpire); err == nil {
-			cfg.JWT.RefreshExpireHours = h
-		}
-	}
 	if issuer := os.Getenv("JWT_ISSUER"); issuer != "" {
 		cfg.JWT.Issuer = issuer
-	}
-	if audience := os.Getenv("JWT_AUDIENCE"); audience != "" {
-		cfg.JWT.Audience = audience
 	}
 
 	// Redis配置
@@ -354,7 +210,12 @@ func applyEnvironmentVariables(cfg *Config) {
 		cfg.Log.Level = level
 	}
 	if logDir := os.Getenv("LOG_DIR"); logDir != "" {
-		cfg.Log.LogDir = logDir
+		cfg.Log.Dir = logDir
+	}
+	if stdout := os.Getenv("LOG_STDOUT"); stdout != "" {
+		if b, err := strconv.ParseBool(stdout); err == nil {
+			cfg.Log.Stdout = b
+		}
 	}
 
 	// 应用配置
@@ -363,9 +224,6 @@ func applyEnvironmentVariables(cfg *Config) {
 	}
 	if version := os.Getenv("APP_VERSION"); version != "" {
 		cfg.App.Version = version
-	}
-	if env := os.Getenv("APP_ENVIRONMENT"); env != "" {
-		cfg.App.Environment = env
 	}
 	if debug := os.Getenv("APP_DEBUG"); debug != "" {
 		if d, err := strconv.ParseBool(debug); err == nil {

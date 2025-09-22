@@ -3,7 +3,6 @@ package api
 import (
 	"rbac.admin/global"
 	"rbac.admin/models"
-	"rbac.admin/pwd"
 	"rbac.admin/utils"
 
 	"github.com/gin-gonic/gin"
@@ -39,7 +38,7 @@ func Login(c *gin.Context) {
 	}
 
 	// 验证密码
-	if !pwd.ComparePassword(user.Password, req.Password) {
+	if !utils.ComparePassword(user.Password, req.Password) {
 		global.Logger.Error("密码验证失败: " + req.Username)
 		c.JSON(401, gin.H{"code": utils.ERROR_PASSWORD_WRONG, "msg": utils.GetErrMsg(utils.ERROR_PASSWORD_WRONG)})
 		return
@@ -101,7 +100,7 @@ func Register(c *gin.Context) {
 	}
 
 	// 密码加密
-	hashPwd := pwd.HashedPassword(req.Password)
+	hashPwd := utils.HashedPassword(req.Password)
 
 	// 创建用户
 	user := models.User{
@@ -198,7 +197,7 @@ func CreateUser(c *gin.Context) {
 	}
 
 	// 密码加密
-	hashPwd := pwd.HashedPassword(req.Password)
+	hashPwd := utils.HashedPassword(req.Password)
 
 	// 创建用户
 	user := models.User{
@@ -310,3 +309,4 @@ func RefreshToken(c *gin.Context) {
 			"token": newToken,
 		},
 	})
+}

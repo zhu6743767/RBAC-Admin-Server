@@ -214,72 +214,133 @@ dlv debug cmd/server/main.go
 RBAC管理员服务器提供了丰富的配置选项，以适应不同环境和需求。以下是主要配置模块的详细说明：
 
 ### 5.1 配置文件结构
-配置文件采用YAML格式，主要包含以下模块：
-- system: 系统基础配置
-- db: 数据库配置
-- redis: Redis缓存配置
-- jwt: JWT认证配置
-- log: 日志配置
-- security: 安全配置
-- monitoring: 监控配置
-- swagger: API文档配置
+系统采用模块化配置设计，每个配置模块对应一个独立的Go文件，位于项目的`config`目录下。主要配置文件包括：
+- system.go: 系统基础配置
+- database.go: 数据库配置
+- redis.go: Redis缓存配置
+- jwt.go: JWT认证配置
+- log.go: 日志配置
+- security.go: 安全配置
+- monitoring.go: 监控配置
+- swagger.go: API文档配置
+
+配置通过`init`函数初始化，并支持环境变量覆盖。
 
 ### 5.2 系统配置
-```yaml
-system:
-  port: 8080                     # 服务器监听端口
-  host: 0.0.0.0                  # 服务器监听地址
-  mode: dev                      # 运行模式（dev/test/prod）
-  read_timeout: 30               # HTTP读取超时（秒）
-  write_timeout: 30              # HTTP写入超时（秒）
+系统配置定义在`config/system.go`文件中：
+
+```go
+// 系统配置结构体
+type SystemConfig struct {
+    Port        int    `yaml:"port" env:"PORT" default:"8080"`
+    Host        string `yaml:"host" env:"HOST" default:"0.0.0.0"`
+    Mode        string `yaml:"mode" env:"MODE" default:"dev"`
+    ReadTimeout int    `yaml:"read_timeout" env:"READ_TIMEOUT" default:"30"`
+    WriteTimeout int   `yaml:"write_timeout" env:"WRITE_TIMEOUT" default:"30"`
+}
+
+// 全局系统配置实例
+var System = &SystemConfig{}
+
+func init() {
+    // 初始化配置
+    configManager.MustLoadConfig("system", System)
+}
 ```
 
 ### 5.3 数据库配置
-```yaml
-db:
-  mode: mysql                    # 数据库类型（mysql/postgresql/sqlite）
-  host: localhost                # 数据库主机地址
-  port: 3306                     # 数据库端口
-  name: rbac_admin               # 数据库名称
-  user: root                     # 数据库用户名
-  password: ""                    # 数据库密码
-  max_open_conns: 100            # 数据库最大连接数
-  max_idle_conns: 10             # 数据库最大空闲连接数
-  conn_max_lifetime: 3600        # 连接最大存活时间（秒）
-  ssl_mode: disable              # SSL模式（disable/require/verify-ca/verify-full）
+数据库配置定义在`config/database.go`文件中：
+
+```go
+// 数据库配置结构体
+type DatabaseConfig struct {
+    Mode          string `yaml:"mode" env:"DB_MODE" default:"sqlite"`
+    Host          string `yaml:"host" env:"DB_HOST" default:"localhost"`
+    Port          int    `yaml:"port" env:"DB_PORT" default:"3306"`
+    Name          string `yaml:"name" env:"DB_NAME" default:"rbac_admin"`
+    User          string `yaml:"user" env:"DB_USER" default:"root"`
+    Password      string `yaml:"password" env:"DB_PASSWORD"`
+    MaxOpenConns  int    `yaml:"max_open_conns" env:"DB_MAX_OPEN_CONNS" default:"100"`
+    MaxIdleConns  int    `yaml:"max_idle_conns" env:"DB_MAX_IDLE_CONNS" default:"10"`
+    ConnMaxLifetime int  `yaml:"conn_max_lifetime" env:"DB_CONN_MAX_LIFETIME" default:"3600"`
+    SSLMode       string `yaml:"ssl_mode" env:"DB_SSL_MODE" default:"disable"`
+}
+
+// 全局数据库配置实例
+var Database = &DatabaseConfig{}
+
+func init() {
+    // 初始化配置
+    configManager.MustLoadConfig("database", Database)
+}
 ```
 
 ### 5.4 Redis配置
-```yaml
-redis:
-  enable: false                  # 是否启用Redis缓存
-  host: localhost                # Redis主机地址
-  port: 6379                     # Redis端口
-  password: ""                    # Redis密码
-  db: 0                          # Redis数据库编号
-  pool_size: 10                  # Redis连接池大小
+Redis配置定义在`config/redis.go`文件中：
+
+```go
+// Redis配置结构体
+type RedisConfig struct {
+    Enable   bool   `yaml:"enable" env:"REDIS_ENABLE" default:"false"`
+    Host     string `yaml:"host" env:"REDIS_HOST" default:"localhost"`
+    Port     int    `yaml:"port" env:"REDIS_PORT" default:"6379"`
+    Password string `yaml:"password" env:"REDIS_PASSWORD"`
+    DB       int    `yaml:"db" env:"REDIS_DB" default:"0"`
+    PoolSize int    `yaml:"pool_size" env:"REDIS_POOL_SIZE" default:"10"`
+}
+
+// 全局Redis配置实例
+var Redis = &RedisConfig{}
+
+func init() {
+    // 初始化配置
+    configManager.MustLoadConfig("redis", Redis)
+}
 ```
 
 ### 5.5 JWT配置
-```yaml
-jwt:
-  secret: ""                     # JWT签名密钥（至少32位）
-  expire_hours: 24               # JWT令牌有效期（小时）
-  issuer: rbac-admin-server      # JWT颁发者
-  subject: access-token          # JWT主题
+JWT配置定义在`config/jwt.go`文件中：
+
+```go
+// JWT配置结构体
+type JWTConfig struct {
+    Secret      string `yaml:"secret" env:"JWT_SECRET"`
+    ExpireHours int    `yaml:"expire_hours" env:"JWT_EXPIRE_HOURS" default:"24"`
+    Issuer      string `yaml:"issuer" env:"JWT_ISSUER" default:"rbac-admin-server"`
+    Subject     string `yaml:"subject" env:"JWT_SUBJECT" default:"access-token"`
+}
+
+// 全局JWT配置实例
+var JWT = &JWTConfig{}
+
+func init() {
+    // 初始化配置
+    configManager.MustLoadConfig("jwt", JWT)
+}
 ```
 
 ### 5.6 日志配置
-```yaml
-log:
-  level: info                    # 日志级别（debug/info/warn/error/fatal）
-  format: text                   # 日志格式（text/json）
-  log_dir: ./logs                # 日志存储目录
-  max_size: 100                  # 单文件最大大小（MB）
-  max_age: 30                    # 日志保留天数
-  max_backups: 7                 # 保留的最大文件数
-  compress: false                # 是否压缩旧日志
-```
+日志配置定义在`config/log.go`文件中：
+
+```go
+// 日志配置结构体
+type LogConfig struct {
+    Level      string `yaml:"level" env:"LOG_LEVEL" default:"info"`
+    Format     string `yaml:"format" env:"LOG_FORMAT" default:"text"`
+    Dir        string `yaml:"dir" env:"LOG_DIR" default:"./logs"`
+    MaxSize    int    `yaml:"max_size" env:"LOG_MAX_SIZE" default:"100"`
+    MaxAge     int    `yaml:"max_age" env:"LOG_MAX_AGE" default:"30"`
+    MaxBackups int    `yaml:"max_backups" env:"LOG_MAX_BACKUPS" default:"7"`
+    Compress   bool   `yaml:"compress" env:"LOG_COMPRESS" default:"false"`
+}
+
+// 全局日志配置实例
+var Log = &LogConfig{}
+
+func init() {
+    // 初始化配置
+    configManager.MustLoadConfig("log", Log)
+}
 
 ### 5.7 多环境配置策略
 系统支持多环境配置，通过`-env`参数或`SYSTEM_MODE`环境变量指定运行环境，系统会自动加载对应的配置文件：
@@ -291,10 +352,12 @@ log:
 | 生产环境 | config.prod.yaml | 最小日志、安全配置、性能优化 |
 
 ### 5.8 环境变量支持
-所有配置项都可以通过环境变量进行覆盖，环境变量的命名规则为：配置模块名_配置项名，例如：
-- SYSTEM_PORT=8081
+所有配置项都可以通过环境变量进行覆盖，环境变量的命名直接对应配置结构体中的`env`标签值，例如：
+- PORT=8081
 - DB_PASSWORD=secure_password
 - JWT_SECRET=your_secure_jwt_secret
+
+环境变量会自动覆盖配置文件中的对应值，无需额外配置。
 
 ### 5.9 配置优先级规则
 配置优先级从高到低依次为：
@@ -340,7 +403,7 @@ curl http://localhost:8080/health
 #### 6.2.3 环境配置
 创建`.env.test`文件：
 ```env
-SYSTEM_MODE=test
+MODE=test
 DB_NAME=rbac_admin_test
 DB_USER=test_user
 DB_PASSWORD=test_password
@@ -395,7 +458,7 @@ git checkout v1.0.0
 #### 6.3.5 环境配置
 创建`.env`文件（存放在安全位置）：
 ```env
-SYSTEM_MODE=prod
+MODE=prod
 DB_HOST=db.example.com
 DB_PORT=3306
 DB_NAME=rbac_admin
@@ -1536,9 +1599,9 @@ go mod tidy
    - **原因**：JWT令牌无效、过期或签名错误
    - **解决步骤**：
      1. 检查JWT令牌是否正确，特别是签名部分
-     2. 确认服务端和客户端使用的JWT密钥是否一致
+     2. 确认服务端和客户端使用的JWT密钥是否一致（配置在`jwt.go`文件中）
      3. 检查令牌是否已过期，可通过`jwt.io`网站解析令牌查看过期时间
-     4. 验证令牌中的issuer和subject是否与服务端配置一致
+     4. 验证令牌中的issuer和subject是否与服务端配置一致（配置在`jwt.go`文件中）
 
 2. **权限不足错误**
    - **问题**：API请求返回"Forbidden"或"Insufficient permissions"错误
@@ -1662,48 +1725,48 @@ go mod tidy
 
 下表列出了RBAC管理员服务器的核心配置项及其说明，您可以根据实际需求进行配置调整。
 
-| 配置模块 | 配置项 | 默认值 | 说明 | 环境变量 | 备注 |
-|---------|-------|-------|------|---------|------|
-| **system** | port | 8080 | 服务器监听端口 | SYSTEM_PORT | 可根据需要修改 |
-|  | host | 0.0.0.0 | 服务器监听地址 | SYSTEM_HOST | 生产环境通常设为0.0.0.0 |
-|  | mode | dev | 运行模式（dev/test/prod） | SYSTEM_MODE | 生产环境必须设为prod |
-|  | read_timeout | 30 | HTTP读取超时（秒） | SYSTEM_READ_TIMEOUT | 可根据网络情况调整 |
-|  | write_timeout | 30 | HTTP写入超时（秒） | SYSTEM_WRITE_TIMEOUT | 可根据网络情况调整 |
-| **db** | mode | sqlite | 数据库类型（mysql/postgresql/sqlite） | DB_MODE | 生产环境推荐MySQL或PostgreSQL |
-|  | host | localhost | 数据库主机地址 | DB_HOST | - |
-|  | port | 3306 | 数据库端口 | DB_PORT | - |
-|  | name | rbac_admin | 数据库名称 | DB_NAME | - |
-|  | user | root | 数据库用户名 | DB_USER | 生产环境建议使用专用用户 |
-|  | password | - | 数据库密码 | DB_PASSWORD | 必填，建议使用环境变量设置 |
-|  | max_open_conns | 100 | 数据库最大连接数 | DB_MAX_OPEN_CONNS | 根据并发量调整 |
-|  | max_idle_conns | 10 | 数据库最大空闲连接数 | DB_MAX_IDLE_CONNS | 建议设为最大连接数的10%-20% |
-|  | conn_max_lifetime | 3600 | 连接最大存活时间（秒） | DB_CONN_MAX_LIFETIME | 建议设置，避免连接过期 |
-|  | ssl_mode | disable | SSL模式（disable/require/verify-ca/verify-full） | DB_SSL_MODE | 生产环境推荐使用verify-ca或verify-full |
-| **redis** | enable | false | 是否启用Redis缓存 | REDIS_ENABLE | - |
-|  | host | localhost | Redis主机地址 | REDIS_HOST | - |
-|  | port | 6379 | Redis端口 | REDIS_PORT | - |
-|  | password | - | Redis密码 | REDIS_PASSWORD | 建议使用环境变量设置 |
-|  | db | 0 | Redis数据库编号 | REDIS_DB | 0-15之间的整数 |
-|  | pool_size | 10 | Redis连接池大小 | REDIS_POOL_SIZE | 根据并发量调整 |
-| **jwt** | secret | - | JWT签名密钥 | JWT_SECRET | 必填，至少32位，建议使用环境变量设置 |
-|  | expire_hours | 24 | JWT令牌有效期（小时） | JWT_EXPIRE_HOURS | 根据安全需求调整 |
-|  | issuer | rbac-admin-server | JWT颁发者 | JWT_ISSUER | - |
-|  | subject | access-token | JWT主题 | JWT_SUBJECT | - |
-| **log** | level | info | 日志级别（debug/info/warn/error/fatal） | LOG_LEVEL | 生产环境建议info或warn |
-|  | format | text | 日志格式（text/json） | LOG_FORMAT | 生产环境推荐json |
-|  | log_dir | ./logs | 日志存储目录 | LOG_DIR | - |
-|  | max_size | 100 | 单文件最大大小（MB） | LOG_MAX_SIZE | - |
-|  | max_age | 30 | 日志保留天数 | LOG_MAX_AGE | - |
-|  | max_backups | 7 | 保留的最大文件数 | LOG_MAX_BACKUPS | - |
-|  | compress | false | 是否压缩旧日志 | LOG_COMPRESS | - |
-| **cors** | enabled | true | 是否启用跨域请求 | CORS_ENABLED | - |
-|  | allow_origins | * | 允许的来源 | CORS_ALLOW_ORIGINS | 生产环境建议限制具体域名 |
-|  | allow_methods | GET,POST,PUT,DELETE,OPTIONS | 允许的HTTP方法 | CORS_ALLOW_METHODS | - |
-|  | allow_headers | Origin,Content-Type,Accept,Authorization | 允许的HTTP头 | CORS_ALLOW_HEADERS | - |
-|  | expose_headers |  | 暴露的HTTP头 | CORS_EXPOSE_HEADERS | - |
-|  | allow_credentials | true | 是否允许凭证 | CORS_ALLOW_CREDENTIALS | - |
-| **swagger** | enabled | true | 是否启用Swagger文档 | SWAGGER_ENABLED | 生产环境建议关闭 |
-|  | path | /swagger | Swagger文档路径 | SWAGGER_PATH | - |
+| 配置模块 | 配置项 | 默认值 | 说明 | 环境变量 | 配置文件 | 备注 |
+|---------|-------|-------|------|---------|---------|------|
+| **system** | port | 8080 | 服务器监听端口 | PORT | system.go | 可根据需要修改 |
+|  | host | 0.0.0.0 | 服务器监听地址 | HOST | system.go | 生产环境通常设为0.0.0.0 |
+|  | mode | dev | 运行模式（dev/test/prod） | MODE | system.go | 生产环境必须设为prod |
+|  | read_timeout | 30 | HTTP读取超时（秒） | READ_TIMEOUT | system.go | 可根据网络情况调整 |
+|  | write_timeout | 30 | HTTP写入超时（秒） | WRITE_TIMEOUT | system.go | 可根据网络情况调整 |
+| **database** | mode | sqlite | 数据库类型（mysql/postgresql/sqlite） | DB_MODE | database.go | 生产环境推荐MySQL或PostgreSQL |
+|  | host | localhost | 数据库主机地址 | DB_HOST | database.go | - |
+|  | port | 3306 | 数据库端口 | DB_PORT | database.go | - |
+|  | name | rbac_admin | 数据库名称 | DB_NAME | database.go | - |
+|  | user | root | 数据库用户名 | DB_USER | database.go | 生产环境建议使用专用用户 |
+|  | password | - | 数据库密码 | DB_PASSWORD | database.go | 必填，建议使用环境变量设置 |
+|  | max_open_conns | 100 | 数据库最大连接数 | DB_MAX_OPEN_CONNS | database.go | 根据并发量调整 |
+|  | max_idle_conns | 10 | 数据库最大空闲连接数 | DB_MAX_IDLE_CONNS | database.go | 建议设为最大连接数的10%-20% |
+|  | conn_max_lifetime | 3600 | 连接最大存活时间（秒） | DB_CONN_MAX_LIFETIME | database.go | 建议设置，避免连接过期 |
+|  | ssl_mode | disable | SSL模式（disable/require/verify-ca/verify-full） | DB_SSL_MODE | database.go | 生产环境推荐使用verify-ca或verify-full |
+| **redis** | enable | false | 是否启用Redis缓存 | REDIS_ENABLE | redis.go | - |
+|  | host | localhost | Redis主机地址 | REDIS_HOST | redis.go | - |
+|  | port | 6379 | Redis端口 | REDIS_PORT | redis.go | - |
+|  | password | - | Redis密码 | REDIS_PASSWORD | redis.go | 建议使用环境变量设置 |
+|  | db | 0 | Redis数据库编号 | REDIS_DB | redis.go | 0-15之间的整数 |
+|  | pool_size | 10 | Redis连接池大小 | REDIS_POOL_SIZE | redis.go | 根据并发量调整 |
+| **jwt** | secret | - | JWT签名密钥 | JWT_SECRET | jwt.go | 必填，至少32位，建议使用环境变量设置 |
+|  | expire_hours | 24 | JWT令牌有效期（小时） | JWT_EXPIRE_HOURS | jwt.go | 根据安全需求调整 |
+|  | issuer | rbac-admin-server | JWT颁发者 | JWT_ISSUER | jwt.go | - |
+|  | subject | access-token | JWT主题 | JWT_SUBJECT | jwt.go | - |
+| **log** | level | info | 日志级别（debug/info/warn/error/fatal） | LOG_LEVEL | log.go | 生产环境建议info或warn |
+|  | format | text | 日志格式（text/json） | LOG_FORMAT | log.go | 生产环境推荐json |
+|  | dir | ./logs | 日志存储目录 | LOG_DIR | log.go | - |
+|  | max_size | 100 | 单文件最大大小（MB） | LOG_MAX_SIZE | log.go | - |
+|  | max_age | 30 | 日志保留天数 | LOG_MAX_AGE | log.go | - |
+|  | max_backups | 7 | 保留的最大文件数 | LOG_MAX_BACKUPS | log.go | - |
+|  | compress | false | 是否压缩旧日志 | LOG_COMPRESS | log.go | - |
+| **cors** | enabled | true | 是否启用跨域请求 | CORS_ENABLED | security.go | - |
+|  | allow_origins | * | 允许的来源 | CORS_ALLOW_ORIGINS | security.go | 生产环境建议限制具体域名 |
+|  | allow_methods | GET,POST,PUT,DELETE,OPTIONS | 允许的HTTP方法 | CORS_ALLOW_METHODS | security.go | - |
+|  | allow_headers | Origin,Content-Type,Accept,Authorization | 允许的HTTP头 | CORS_ALLOW_HEADERS | security.go | - |
+|  | expose_headers |  | 暴露的HTTP头 | CORS_EXPOSE_HEADERS | security.go | - |
+|  | allow_credentials | true | 是否允许凭证 | CORS_ALLOW_CREDENTIALS | security.go | - |
+| **swagger** | enabled | true | 是否启用Swagger文档 | SWAGGER_ENABLED | swagger.go | 生产环境建议关闭 |
+|  | path | /swagger | Swagger文档路径 | SWAGGER_PATH | swagger.go | - |
 
 ### 11.2 开发与部署命令速查表
 
@@ -1770,4 +1833,5 @@ go mod tidy
 
 | 版本 | 发布日期 | 更新内容 | 责任人 |
 |------|---------|---------|--------|
+| v1.1.0 | 2024-03-15 | 更新配置系统为模块化设计，调整环境变量命名规则，更新配置文件结构 | 开发团队 |
 | v1.0.0 | 2023-12-01 | 初始版本 | 开发团队 |

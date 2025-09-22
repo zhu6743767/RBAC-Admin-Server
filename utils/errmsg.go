@@ -1,4 +1,4 @@
-package errmsg
+package utils
 
 // 错误码常量定义
 const (

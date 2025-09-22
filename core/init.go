@@ -3,7 +3,9 @@ package core
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
