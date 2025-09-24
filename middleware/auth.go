@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"net/http"
-	"rbac.admin/global"
+	"rbac_admin_server/global"
 	"time"
 
 	"github.com/gin-gonic/gin"

@@ -27,10 +27,12 @@ local_settings.yaml           # 本地配置文件
 
 # 📋 配置文件规则
 *.yaml                          # 忽略所有yaml文件
-!settings_dev.yaml             # 但保留开发环境配置（示例）
-!settings_test.yaml            # 保留测试环境配置（示例）
-!settings_prod.yaml            # 保留生产环境配置（示例）
+!settings.yaml.example         # 保留配置文件示例
+!settings_dev.yaml.example     # 保留开发环境配置示例
+!settings_test.yaml.example    # 保留测试环境配置示例
+!settings_prod.yaml.example    # 保留生产环境配置示例
 settings.yaml                   # 忽略主配置文件（包含敏感信息）
+settings_*.yaml                 # 忽略所有特定环境配置文件
 config/config.yaml             # 忽略配置目录下的配置文件
 config/production.yaml         # 忽略生产配置
 

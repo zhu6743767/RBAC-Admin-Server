@@ -1,9 +1,9 @@
 package api
 
 import (
-	"rbac.admin/global"
-	"rbac.admin/models"
-	"rbac.admin/utils"
+	"rbac_admin_server/global"
+	"rbac_admin_server/models"
+	"rbac_admin_server/utils"
 
 	"github.com/gin-gonic/gin"
 )

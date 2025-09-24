@@ -5,7 +5,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
-	"rbac.admin/config"
+	"rbac_admin_server/config"
 )
 
 // Config 全局配置实例

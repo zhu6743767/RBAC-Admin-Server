@@ -1,8 +1,8 @@
 # RBAC管理员服务器部署文档
 
 ## 文档版本信息
-- **版本**: v1.0.0
-- **发布日期**: 2023年12月
+- **版本**: v1.0.1
+- **发布日期**: 2024年10月
 - **适用项目**: RBAC管理员服务器
 
 ## 1. 项目概述
@@ -14,6 +14,8 @@ RBAC管理员服务器是一个基于角色的访问控制系统（Role-Based Ac
 - 角色管理：角色的创建、分配、权限配置
 - 权限管理：细粒度的API权限和数据权限控制
 - 部门管理：组织架构的层级管理
+- 菜单管理：系统菜单的配置和管理
+- 文件管理：上传、下载和管理文件资源
 - 认证与授权：基于JWT的身份认证和基于角色的访问授权
 - 审计日志：用户操作的详细记录与追踪
 
@@ -23,8 +25,8 @@ RBAC管理员服务器是一个基于角色的访问控制系统（Role-Based Ac
 - **数据库**: 支持MySQL、PostgreSQL、SQLite
 - **缓存**: Redis
 - **认证**: JWT
+- **权限控制**: Casbin
 - **API文档**: Swagger
-- **监控**: Prometheus、Grafana
 - **容器化**: Docker、Docker Compose
 
 ## 2. 项目结构
@@ -33,31 +35,33 @@ RBAC管理员服务器采用模块化的项目结构，清晰地划分了各个�
 
 ```
 rbac_admin_server/
-├── cmd/
-│   └── server/
-│       └── main.go           # 程序入口
-├── config/
-│   ├── config.go             # 配置结构体定义
-│   ├── config.yaml           # 默认配置文件
-│   ├── config.dev.yaml       # 开发环境配置
-│   ├── config.test.yaml      # 测试环境配置
-│   └── config.prod.yaml      # 生产环境配置
-├── internal/
-│   ├── api/                  # API层，处理HTTP请求
-│   ├── middleware/           # 中间件，如认证、日志、CORS等
-│   ├── model/                # 数据模型
-│   ├── repository/           # 数据访问层
-│   ├── service/              # 业务逻辑层
-│   └── router/               # 路由定义
-├── pkg/
-│   ├── auth/                 # 认证相关工具
-│   ├── cache/                # 缓存工具
-│   ├── database/             # 数据库工具
-│   ├── logger/               # 日志工具
-│   └── utils/                # 通用工具函数
+├── main.go                   # 程序入口
+├── api/                      # API层，处理HTTP请求
+│   ├── dept_api/             # 部门管理API
+│   ├── file_api/             # 文件管理API
+│   ├── log_api/              # 日志管理API
+│   ├── menu_api/             # 菜单管理API
+│   ├── permission_api/       # 权限管理API
+│   ├── profile_api/          # 个人中心API
+│   ├── role_api/             # 角色管理API
+│   ├── user_api/             # 用户管理API
+│   └── enter.go              # API入口文件
+├── config/                   # 配置相关
+│   └── enter.go              # 配置结构体定义
+├── core/                     # 核心组件
+│   ├── init_casbin/          # Casbin权限控制初始化
+│   ├── init_gorm/            # GORM数据库初始化
+│   ├── init_redis/           # Redis缓存初始化
+│   └── read_config.go        # 配置文件读取
 ├── global/                   # 全局变量和单例
-├── scripts/                  # 部署和维护脚本
-├── docs/                     # 文档
+│   └── global.go             # 全局变量定义
+├── middleware/               # 中间件，如认证、日志、CORS等
+├── models/                   # 数据模型
+├── routes/                   # 路由定义
+│   └── routes.go             # 路由配置
+├── utils/                    # 工具函数
+├── settings.yaml.example     # 配置文件示例模板
+├── .env                      # 环境变量配置文件（本地开发使用）
 ├── go.mod                    # Go模块定义
 └── go.sum                    # 依赖版本锁定
 ```
@@ -65,32 +69,33 @@ rbac_admin_server/
 ### 2.1 核心组件说明
 
 #### 2.1.1 配置系统
-配置系统负责管理应用的所有配置项，支持YAML配置文件和环境变量两种配置方式，并实现了配置热加载和多环境配置切换功能。
+配置系统由`config/enter.go`定义配置结构体，`core/read_config.go`负责读取和解析配置文件。支持YAML配置文件和环境变量两种配置方式，通过`-settings`命令行参数指定不同环境的配置文件。
 
 #### 2.1.2 数据库组件
-数据库组件封装了与不同类型数据库的交互逻辑，支持MySQL、PostgreSQL和SQLite，并实现了连接池管理、事务处理和数据模型映射等功能。
+数据库组件由`core/init_gorm/enter.go`实现，封装了与MySQL、PostgreSQL和SQLite数据库的交互逻辑，提供连接池管理、事务处理和数据模型映射等功能。
 
 #### 2.1.3 Redis缓存组件
-Redis缓存组件提供了高性能的缓存服务，用于存储会话数据、用户权限信息和热点数据，支持缓存过期、分布式缓存和缓存一致性保证。
+Redis缓存组件由`core/init_redis/enter.go`实现，提供高性能的缓存服务，用于存储会话数据、用户权限信息和热点数据，支持基本的Redis操作函数。
 
-#### 2.1.4 系统初始化组件
-系统初始化组件负责应用启动时的资源初始化工作，包括配置加载、日志初始化、数据库连接、Redis连接、路由注册和中间件初始化等。
+#### 2.1.4 Casbin权限控制
+Casbin权限控制组件由`core/init_casbin/enter.go`实现，提供基于RBAC模型的细粒度权限控制功能，支持策略更新、角色权限分配等操作。
 
 #### 2.1.5 API与路由组件
-API与路由组件定义了系统的所有API端点和路由规则，采用RESTful设计风格，支持参数验证、请求限流和响应格式化等功能。
+API层采用模块化设计，每个功能模块（用户、角色、权限等）都有独立的API包，包含处理HTTP请求的控制器方法。路由配置由`routes/routes.go`统一管理。
 
 #### 2.1.6 中间件组件
-中间件组件提供了一系列可插拔的中间件，用于处理认证授权、请求日志、跨域请求、异常处理和性能监控等横切关注点。
+中间件组件位于`middleware/`目录，提供认证、授权、跨域请求处理、日志记录等横切关注点功能，可灵活配置和使用。
 
-#### 2.1.7 业务逻辑层
-业务逻辑层实现了系统的核心业务功能，包括用户管理、角色管理、权限管理和部门管理等，并处理业务规则验证和数据转换。
+#### 2.1.7 全局变量管理
+全局变量和单例由`global/global.go`统一管理，包括配置、数据库连接、Redis客户端、日志器等，方便在整个应用中访问。
 
 ## 3. 快速开始
 
 ### 3.1 环境准备
 - **Go**: 1.18或更高版本
 - **数据库**: MySQL 5.7+、PostgreSQL 12+或SQLite 3+
-- **Redis**: 6.0+（可选）
+- **Redis**: 6.0+
+- **Git**: 用于代码管理
 
 ### 3.2 克隆代码
 ```bash
@@ -106,72 +111,119 @@ go mod tidy
 ```
 
 #### 3.3.2 配置文件设置
-复制`config/config.yaml`到`config/config.local.yaml`并根据实际环境修改配置：
-```yaml
-# 系统配置
-system:
-  port: 8080
-  host: 0.0.0.0
-  mode: dev  # dev/test/prod
+复制`settings.yaml.example`配置文件模板并根据实际环境修改：
+```bash
+# 复制配置文件模板（Windows系统）
+copy settings.yaml.example settings.yaml
 
-# 数据库配置
-db:
-  mode: mysql
-  host: localhost
-  port: 3306
-  name: rbac_admin
-  user: root
-  password: your_password
-  max_open_conns: 100
-  max_idle_conns: 10
+# 复制配置文件模板（Linux/Mac系统）
+cp settings.yaml.example settings.yaml
 
-# Redis配置
-redis:
-  enable: true
-  host: localhost
-  port: 6379
-  password: ""
+# 编辑配置文件，修改数据库、Redis等配置项
+# Windows系统可以使用记事本或其他编辑器
+notepad settings.yaml
 
-# JWT配置
-jwt:
-  secret: your_secure_jwt_secret_at_least_32_characters
-  expire_hours: 24
+# Linux/Mac系统可以使用vi编辑器
+vi settings.yaml
 ```
 
-或者使用环境变量覆盖配置，例如：
+配置文件示例内容：
+```yaml
+# 系统基础配置
+System:
+  AppName: "rbac_admin_server"
+  Mode: "dev"
+  Port: 8080
+  Host: "0.0.0.0"
+  Version: "1.0.0"
+
+# 数据库
+Database:
+  Type: "mysql"
+  Host: "localhost"
+  Port: 3306
+  Database: "rbac_admin_server"
+  Username: "root"
+  Password: "${DB_PASSWORD:123456}"
+  Charset: "utf8mb4"
+  MaxOpenConnections: 10
+  MaxIdleConnections: 5
+  MaxIdleTime: 30
+
+# Redis
+Redis:
+  Host: "localhost"
+  Port: 6379
+  Password: "${REDIS_PASSWORD:}"
+  Database: 0
+  Prefix: "rbac"
+  Timeout: 30
+  PoolSize: 10
+
+# JWT
+JWT:
+  Secret: "${JWT_SECRET:your_jwt_secret_key}"
+  Expires: 7200
+  Issuer: "rbac_admin_server"
+```
+
+#### 3.3.3 环境变量覆盖
+对于敏感信息（如数据库密码、JWT密钥等），推荐使用环境变量进行覆盖，或者创建`.env`文件设置环境变量：
+
 ```bash
-export SYSTEM_MODE=dev
-export DB_PASSWORD=your_password
-export JWT_SECRET=your_secure_jwt_secret_at_least_32_characters
+# 复制.env示例文件
+cp .env.example .env
+
+# 编辑.env文件，设置环境变量
+vi .env
 ```
 
 ### 3.4 启动服务器
 
 #### 3.4.1 开发环境启动
 ```bash
-go run cmd/server/main.go
-```
+# 使用默认配置启动
+go run main.go
 
-或者指定环境：
-```bash
-go run cmd/server/main.go -env dev
+# 指定配置文件路径启动
+go run main.go -settings settings_dev.yaml
 ```
 
 #### 3.4.2 构建并运行
 ```bash
-go build -o rbac_admin_server cmd/server/main.go
+# 构建二进制文件
+go build -o rbac_admin_server main.go
+
+# 运行二进制文件
 ./rbac_admin_server
+
+# 指定配置文件运行
+./rbac_admin_server -settings settings_prod.yaml
+```
+
+Windows系统也可以使用提供的启动脚本：
+```bash
+# Windows系统启动
+start_server.bat
 ```
 
 ### 3.5 验证服务
 服务启动后，可以通过以下方式验证：
 
-1. **健康检查**: http://localhost:8080/health
-2. **API文档**: http://localhost:8080/swagger/index.html
-3. **示例API请求**（使用curl）：
+1. **访问公共接口**：
+   - 登录接口: http://localhost:8080/login
+   - 注册接口: http://localhost:8080/register
+
+2. **静态资源访问**：
+   - 上传文件目录: http://localhost:8080/uploads/
+
+3. **示例API请求**（使用curl，需先登录获取token）：
    ```bash
-   # 获取部门列表示例
-   curl -X GET http://localhost:8080/api/v1/departments
+   # 登录获取token
+   curl -X POST -H "Content-Type: application/json" -d '{"username":"admin","password":"123456"}' http://localhost:8080/login
+   
+   # 使用token访问受保护API
+   curl -X GET -H "Authorization: Bearer YOUR_TOKEN_HERE" http://localhost:8080/admin/api/users
    ```
 
 ## 4. 开发指南
@@ -214,17 +266,14 @@ dlv debug cmd/server/main.go
 RBAC管理员服务器提供了丰富的配置选项，以适应不同环境和需求。以下是主要配置模块的详细说明：
 
 ### 5.1 配置文件结构
-系统采用模块化配置设计，每个配置模块对应一个独立的Go文件，位于项目的`config`目录下。主要配置文件包括：
-- system.go: 系统基础配置
-- database.go: 数据库配置
-- redis.go: Redis缓存配置
-- jwt.go: JWT认证配置
-- log.go: 日志配置
-- security.go: 安全配置
-- monitoring.go: 监控配置
-- swagger.go: API文档配置
+系统配置主要通过YAML配置文件进行管理，核心配置定义在`config/enter.go`中。配置文件采用单一文件方式组织，包含系统、数据库、Redis等多个配置模块。
 
-配置通过`init`函数初始化，并支持环境变量覆盖。
+配置加载流程：
+1. 通过命令行参数`-settings`指定配置文件路径（默认值为`settings.yaml`）
+2. 通过`core.ReadConfig`函数读取并解析配置文件
+3. 配置内容被加载到`global.Config`全局变量中供应用程序使用
+
+配置支持通过环境变量覆盖敏感信息（如数据库密码、JWT密钥等）。
 
 ### 5.2 系统配置
 系统配置定义在`config/system.go`文件中：
@@ -276,30 +325,29 @@ func init() {
 ```
 
 ### 5.4 Redis配置
-Redis配置定义在`config/redis.go`文件中：
+Redis配置定义在`core/global/redis.go`文件中：
 
 ```go
 // Redis配置结构体
 type RedisConfig struct {
-    Enable   bool   `yaml:"enable" env:"REDIS_ENABLE" default:"false"`
+    Enable   bool   `yaml:"enable" env:"REDIS_ENABLE" default:"true"`
     Host     string `yaml:"host" env:"REDIS_HOST" default:"localhost"`
     Port     int    `yaml:"port" env:"REDIS_PORT" default:"6379"`
     Password string `yaml:"password" env:"REDIS_PASSWORD"`
     DB       int    `yaml:"db" env:"REDIS_DB" default:"0"`
-    PoolSize int    `yaml:"pool_size" env:"REDIS_POOL_SIZE" default:"10"`
+    PoolSize int    `yaml:"pool_size" env:"REDIS_POOL_SIZE" default:"20"`
 }
 
-// 全局Redis配置实例
-var Redis = &RedisConfig{}
+// RedisClient 全局Redis客户端
+svar RedisClient *redis.Client
 
-func init() {
-    // 初始化配置
-    configManager.MustLoadConfig("redis", Redis)
-}
-```
+// InitRedis 初始化Redis连接
+func InitRedis() error {
+    // 实现Redis初始化逻辑
+}```
 
 ### 5.5 JWT配置
-JWT配置定义在`config/jwt.go`文件中：
+JWT配置定义在`core/config/config.go`文件中，并在`core/global/jwt.go`中实现JWT相关功能：
 
 ```go
 // JWT配置结构体
@@ -310,17 +358,17 @@ type JWTConfig struct {
     Subject     string `yaml:"subject" env:"JWT_SUBJECT" default:"access-token"`
 }
 
-// 全局JWT配置实例
-var JWT = &JWTConfig{}
+// JWT 全局JWT对象
+svar JWT = &JWTService{}
 
-func init() {
-    // 初始化配置
-    configManager.MustLoadConfig("jwt", JWT)
-}
+// InitJWT 初始化JWT服务
+func InitJWT() {
+    // 实现JWT初始化逻辑
+}```
 ```
 
 ### 5.6 日志配置
-日志配置定义在`config/log.go`文件中：
+日志配置定义在`core/config/config.go`文件中，并在`core/global/log.go`中实现日志功能：
 
 ```go
 // 日志配置结构体
@@ -334,22 +382,21 @@ type LogConfig struct {
     Compress   bool   `yaml:"compress" env:"LOG_COMPRESS" default:"false"`
 }
 
-// 全局日志配置实例
-var Log = &LogConfig{}
+// Log 全局日志对象
+svar Log *zap.Logger
 
-func init() {
-    // 初始化配置
-    configManager.MustLoadConfig("log", Log)
-}
-
+// InitLogger 初始化日志系统
+func InitLogger() {
+    // 实现日志初始化逻辑
+}```
 ### 5.7 多环境配置策略
-系统支持多环境配置，通过`-env`参数或`SYSTEM_MODE`环境变量指定运行环境，系统会自动加载对应的配置文件：
+系统支持多环境配置，通过`-settings`参数指定配置文件路径：
 
 | 环境 | 配置文件 | 特点 |
 |------|---------|------|
-| 开发环境 | config.dev.yaml | 调试日志、热重载、详细错误信息 |
-| 测试环境 | config.test.yaml | 测试数据、性能监控、简化日志 |
-| 生产环境 | config.prod.yaml | 最小日志、安全配置、性能优化 |
+| 开发环境 | settings_dev.yaml | 调试日志、详细错误信息 |
+| 测试环境 | settings_test.yaml | 测试数据、性能监控、简化日志 |
+| 生产环境 | settings_prod.yaml | 最小日志、安全配置、性能优化 |
 
 ### 5.8 环境变量支持
 所有配置项都可以通过环境变量进行覆盖，环境变量的命名直接对应配置结构体中的`env`标签值，例如：
@@ -363,9 +410,8 @@ func init() {
 配置优先级从高到低依次为：
 1. 命令行参数
 2. 环境变量
-3. 特定环境配置文件（如config.prod.yaml）
-4. 本地配置文件（config.local.yaml）
-5. 默认配置文件（config.yaml）
+3. 指定的配置文件（通过-settings参数）
+4. 默认配置文件（settings.yaml）
 
 ### 5.10 生产环境配置最佳实践
 - 使用环境变量存储敏感信息（如数据库密码、JWT密钥）
@@ -461,7 +507,7 @@ git checkout v1.0.0
 MODE=prod
 DB_HOST=db.example.com
 DB_PORT=3306
-DB_NAME=rbac_admin
+DB_NAME=rbac_admin_server
 DB_USER=rbac_user
 DB_PASSWORD=your_secure_db_password
 REDIS_HOST=redis.example.com
@@ -482,10 +528,11 @@ chmod 600 /etc/rbac_admin_server/.env  # 限制敏感配置文件权限
 
 #### 6.3.7 应用构建
 ```bash
+# 在开发环境或CI/CD环境中构建
 # 安装依赖
 go mod tidy
 # 静态编译（减小体积并避免动态链接库依赖）
-go build -ldflags="-s -w -extldflags '-static'" -o rbac_admin_server cmd/server/main.go
+go build -ldflags="-s -w -extldflags '-static'" -o rbac_admin_server main.go
 ```
 
 #### 6.3.8 Systemd服务配置
@@ -501,7 +548,7 @@ User=rbac_admin
 Group=rbac_admin
 WorkingDirectory=/opt/rbac_admin_server
 EnvironmentFile=/etc/rbac_admin_server/.env
-ExecStart=/opt/rbac_admin_server/rbac_admin_server
+ExecStart=/opt/rbac_admin_server/rbac_admin_server -f settings_prod.yaml
 Restart=on-failure
 RestartSec=5s
 LimitNOFILE=65536
@@ -561,25 +608,18 @@ server {
         proxy_buffers 8 8k;
     }
 
-    # 健康检查端点不进行限流
-    location /health {
-        proxy_pass http://localhost:8080/health;
-        allow 127.0.0.1;
-        deny all;
-    }
-
-    # 指标收集端点
-    location /metrics {
-        proxy_pass http://localhost:8080/metrics;
-        allow 127.0.0.1;
-        deny all;
-    }
-
     # 静态资源缓存
     location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
         proxy_pass http://localhost:8080;
         expires 30d;
         add_header Cache-Control "public, max-age=2592000";
+    }
+    
+    # 文件上传目录
+    location /uploads/ {
+        proxy_pass http://localhost:8080/uploads/;
+        expires 1d;
+        add_header Cache-Control "public, max-age=86400";
     }
 }
 
@@ -599,11 +639,14 @@ systemctl enable nginx
 
 ### 6.4 验证生产环境部署
 
-#### 6.4.1 健康检查
+#### 6.4.1 服务状态检查
 ```bash
-curl http://localhost:8080/health
+# 查看Systemd服务状态
+systemctl status rbac_admin_server
+
+# 检查监听端口
+netstat -tuln | grep 8080
 ```
-预期响应：`{"status":"ok"}`
 
 #### 6.4.2 日志查看
 ```bash
@@ -616,11 +659,12 @@ cat /var/log/rbac_admin_server/app.log
 #### 6.4.3 API测试
 使用curl或其他工具测试API端点：
 ```bash
-curl -X GET https://rbac.example.com/api/v1/departments
+# 测试公共登录接口
+curl -X POST -H "Content-Type: application/json" -d '{"username":"admin","password":"your_password"}' https://rbac.example.com/login
 ```
 
 #### 6.4.4 HTTPS配置验证
-使用浏览器访问 https://rbac.example.com/swagger/index.html 确认HTTPS配置正确
+使用浏览器访问 https://rbac.example.com/login 确认HTTPS配置正确
 
 ### 6.5 配置自动更新
 
@@ -651,6 +695,15 @@ else
     echo "Invalid configuration format, update aborted at $(date)"
     rm -f /etc/rbac_admin_server/.env.new
 fi
+```
+
+设置定时任务自动检查配置更新：
+```bash
+# 编辑crontab配置
+crontab -e
+
+# 添加每天凌晨2点执行配置更新
+0 2 * * * /opt/rbac_admin_server/scripts/update_config.sh >> /var/log/rbac_admin_server/config_update.log 2>&1
 ```
 
 设置脚本权限并创建定时任务：
@@ -713,7 +766,7 @@ RUN go mod download
 COPY . .
 
 # 编译应用
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o rbac_admin_server cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o rbac_admin_server main.go
 
 # 使用Alpine作为运行环境
 FROM alpine:3.16
@@ -724,8 +777,8 @@ WORKDIR /app
 # 复制编译好的二进制文件
 COPY --from=builder /app/rbac_admin_server .
 
-# 复制配置文件
-COPY config/config.yaml config/config.yaml
+# 复制配置文件模板
+COPY settings.yaml.example .
 
 # 设置时区
 RUN apk --no-cache add tzdata && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
@@ -737,7 +790,7 @@ RUN mkdir -p /app/logs
 EXPOSE 8080
 
 # 启动命令
-CMD ["./rbac_admin_server", "-env", "prod"]
+CMD ["./rbac_admin_server", "-settings", "settings_prod.yaml"]
 ```
 
 #### 7.2.4 Docker Compose示例
@@ -750,10 +803,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SYSTEM_MODE=prod
       - DB_HOST=db
       - DB_PORT=3306
-      - DB_NAME=rbac_admin
+      - DB_NAME=rbac_admin_server
       - DB_USER=root
       - DB_PASSWORD=${DB_PASSWORD}
       - REDIS_HOST=redis
@@ -763,6 +815,7 @@ services:
       - redis
     volumes:
       - ./logs:/app/logs
+      - ./settings_prod.yaml:/app/settings_prod.yaml
     restart: always
 
   db:
@@ -770,7 +823,7 @@ services:
     container_name: rbac_admin_db
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
-      - MYSQL_DATABASE=rbac_admin
+      - MYSQL_DATABASE=rbac_admin_server
     volumes:
       - db_data:/var/lib/mysql
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -802,13 +855,17 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /health {
-        proxy_pass http://app:8080/health;
-        allow 127.0.0.1;
-        deny all;
+    # 静态文件和文件上传目录配置
+    location /static/ {
+        alias /path/to/static/files/;
+        expires 30d;
     }
-}
-```
+
+    location /uploads/ {
+        alias /path/to/uploaded/files/;
+        expires 7d;
+    }
+}```
 
 #### 7.2.6 部署命令示例
 ```bash
@@ -1727,46 +1784,45 @@ go mod tidy
 
 | 配置模块 | 配置项 | 默认值 | 说明 | 环境变量 | 配置文件 | 备注 |
 |---------|-------|-------|------|---------|---------|------|
-| **system** | port | 8080 | 服务器监听端口 | PORT | system.go | 可根据需要修改 |
-|  | host | 0.0.0.0 | 服务器监听地址 | HOST | system.go | 生产环境通常设为0.0.0.0 |
-|  | mode | dev | 运行模式（dev/test/prod） | MODE | system.go | 生产环境必须设为prod |
-|  | read_timeout | 30 | HTTP读取超时（秒） | READ_TIMEOUT | system.go | 可根据网络情况调整 |
-|  | write_timeout | 30 | HTTP写入超时（秒） | WRITE_TIMEOUT | system.go | 可根据网络情况调整 |
-| **database** | mode | sqlite | 数据库类型（mysql/postgresql/sqlite） | DB_MODE | database.go | 生产环境推荐MySQL或PostgreSQL |
-|  | host | localhost | 数据库主机地址 | DB_HOST | database.go | - |
-|  | port | 3306 | 数据库端口 | DB_PORT | database.go | - |
-|  | name | rbac_admin | 数据库名称 | DB_NAME | database.go | - |
-|  | user | root | 数据库用户名 | DB_USER | database.go | 生产环境建议使用专用用户 |
-|  | password | - | 数据库密码 | DB_PASSWORD | database.go | 必填，建议使用环境变量设置 |
-|  | max_open_conns | 100 | 数据库最大连接数 | DB_MAX_OPEN_CONNS | database.go | 根据并发量调整 |
-|  | max_idle_conns | 10 | 数据库最大空闲连接数 | DB_MAX_IDLE_CONNS | database.go | 建议设为最大连接数的10%-20% |
-|  | conn_max_lifetime | 3600 | 连接最大存活时间（秒） | DB_CONN_MAX_LIFETIME | database.go | 建议设置，避免连接过期 |
-|  | ssl_mode | disable | SSL模式（disable/require/verify-ca/verify-full） | DB_SSL_MODE | database.go | 生产环境推荐使用verify-ca或verify-full |
-| **redis** | enable | false | 是否启用Redis缓存 | REDIS_ENABLE | redis.go | - |
-|  | host | localhost | Redis主机地址 | REDIS_HOST | redis.go | - |
-|  | port | 6379 | Redis端口 | REDIS_PORT | redis.go | - |
-|  | password | - | Redis密码 | REDIS_PASSWORD | redis.go | 建议使用环境变量设置 |
-|  | db | 0 | Redis数据库编号 | REDIS_DB | redis.go | 0-15之间的整数 |
-|  | pool_size | 10 | Redis连接池大小 | REDIS_POOL_SIZE | redis.go | 根据并发量调整 |
-| **jwt** | secret | - | JWT签名密钥 | JWT_SECRET | jwt.go | 必填，至少32位，建议使用环境变量设置 |
-|  | expire_hours | 24 | JWT令牌有效期（小时） | JWT_EXPIRE_HOURS | jwt.go | 根据安全需求调整 |
-|  | issuer | rbac-admin-server | JWT颁发者 | JWT_ISSUER | jwt.go | - |
-|  | subject | access-token | JWT主题 | JWT_SUBJECT | jwt.go | - |
-| **log** | level | info | 日志级别（debug/info/warn/error/fatal） | LOG_LEVEL | log.go | 生产环境建议info或warn |
-|  | format | text | 日志格式（text/json） | LOG_FORMAT | log.go | 生产环境推荐json |
-|  | dir | ./logs | 日志存储目录 | LOG_DIR | log.go | - |
-|  | max_size | 100 | 单文件最大大小（MB） | LOG_MAX_SIZE | log.go | - |
-|  | max_age | 30 | 日志保留天数 | LOG_MAX_AGE | log.go | - |
-|  | max_backups | 7 | 保留的最大文件数 | LOG_MAX_BACKUPS | log.go | - |
-|  | compress | false | 是否压缩旧日志 | LOG_COMPRESS | log.go | - |
-| **cors** | enabled | true | 是否启用跨域请求 | CORS_ENABLED | security.go | - |
-|  | allow_origins | * | 允许的来源 | CORS_ALLOW_ORIGINS | security.go | 生产环境建议限制具体域名 |
-|  | allow_methods | GET,POST,PUT,DELETE,OPTIONS | 允许的HTTP方法 | CORS_ALLOW_METHODS | security.go | - |
-|  | allow_headers | Origin,Content-Type,Accept,Authorization | 允许的HTTP头 | CORS_ALLOW_HEADERS | security.go | - |
-|  | expose_headers |  | 暴露的HTTP头 | CORS_EXPOSE_HEADERS | security.go | - |
-|  | allow_credentials | true | 是否允许凭证 | CORS_ALLOW_CREDENTIALS | security.go | - |
-| **swagger** | enabled | true | 是否启用Swagger文档 | SWAGGER_ENABLED | swagger.go | 生产环境建议关闭 |
-|  | path | /swagger | Swagger文档路径 | SWAGGER_PATH | swagger.go | - |
+| **system** | port | 8080 | 服务器监听端口 | PORT | core/config/config.go | 可根据需要修改 |
+|  | host | 0.0.0.0 | 服务器监听地址 | HOST | core/config/config.go | 生产环境通常设为0.0.0.0 |
+|  | read_timeout | 30 | HTTP读取超时（秒） | READ_TIMEOUT | core/config/config.go | 可根据网络情况调整 |
+|  | write_timeout | 30 | HTTP写入超时（秒） | WRITE_TIMEOUT | core/config/config.go | 可根据网络情况调整 |
+| **database** | mode | sqlite | 数据库类型（mysql/postgresql/sqlite） | DB_MODE | core/config/config.go | 生产环境推荐MySQL或PostgreSQL |
+|  | host | localhost | 数据库主机地址 | DB_HOST | core/config/config.go | - |
+|  | port | 3306 | 数据库端口 | DB_PORT | core/config/config.go | - |
+|  | name | rbac_admin_server | 数据库名称 | DB_NAME | core/config/config.go | - |
+|  | user | root | 数据库用户名 | DB_USER | core/config/config.go | 生产环境建议使用专用用户 |
+|  | password | - | 数据库密码 | DB_PASSWORD | core/config/config.go | 必填，建议使用环境变量设置 |
+|  | max_open_conns | 100 | 数据库最大连接数 | DB_MAX_OPEN_CONNS | core/config/config.go | 根据并发量调整 |
+|  | max_idle_conns | 10 | 数据库最大空闲连接数 | DB_MAX_IDLE_CONNS | core/config/config.go | 建议设为最大连接数的10%-20% |
+|  | conn_max_lifetime | 3600 | 连接最大存活时间（秒） | DB_CONN_MAX_LIFETIME | core/config/config.go | 建议设置，避免连接过期 |
+|  | ssl_mode | disable | SSL模式（disable/require/verify-ca/verify-full） | DB_SSL_MODE | core/config/config.go | 生产环境推荐使用verify-ca或verify-full |
+| **redis** | enable | true | 是否启用Redis缓存 | REDIS_ENABLE | core/config/config.go | - |
+|  | host | localhost | Redis主机地址 | REDIS_HOST | core/config/config.go | - |
+|  | port | 6379 | Redis端口 | REDIS_PORT | core/config/config.go | - |
+|  | password | - | Redis密码 | REDIS_PASSWORD | core/config/config.go | 建议使用环境变量设置 |
+|  | db | 0 | Redis数据库编号 | REDIS_DB | core/config/config.go | 0-15之间的整数 |
+|  | pool_size | 20 | Redis连接池大小 | REDIS_POOL_SIZE | core/config/config.go | 根据并发量调整 |
+| **jwt** | secret | - | JWT签名密钥 | JWT_SECRET | core/config/config.go | 必填，至少32位，建议使用环境变量设置 |
+|  | expire_hours | 24 | JWT令牌有效期（小时） | JWT_EXPIRE_HOURS | core/config/config.go | 根据安全需求调整 |
+|  | issuer | rbac-admin-server | JWT颁发者 | JWT_ISSUER | core/config/config.go | - |
+|  | subject | access-token | JWT主题 | JWT_SUBJECT | core/config/config.go | - |
+| **log** | level | info | 日志级别（debug/info/warn/error/fatal） | LOG_LEVEL | core/config/config.go | 生产环境建议info或warn |
+|  | format | text | 日志格式（text/json） | LOG_FORMAT | core/config/config.go | 生产环境推荐json |
+|  | dir | ./logs | 日志存储目录 | LOG_DIR | core/config/config.go | - |
+|  | max_size | 100 | 单文件最大大小（MB） | LOG_MAX_SIZE | core/config/config.go | - |
+|  | max_age | 30 | 日志保留天数 | LOG_MAX_AGE | core/config/config.go | - |
+|  | max_backups | 7 | 保留的最大文件数 | LOG_MAX_BACKUPS | core/config/config.go | - |
+|  | compress | false | 是否压缩旧日志 | LOG_COMPRESS | core/config/config.go | - |
+| **cors** | enabled | true | 是否启用跨域请求 | CORS_ENABLED | core/config/config.go | - |
+|  | allow_origins | * | 允许的来源 | CORS_ALLOW_ORIGINS | core/config/config.go | 生产环境建议限制具体域名 |
+|  | allow_methods | GET,POST,PUT,DELETE,OPTIONS | 允许的HTTP方法 | CORS_ALLOW_METHODS | core/config/config.go | - |
+|  | allow_headers | Origin,Content-Type,Accept,Authorization | 允许的HTTP头 | CORS_ALLOW_HEADERS | core/config/config.go | - |
+|  | expose_headers |  | 暴露的HTTP头 | CORS_EXPOSE_HEADERS | core/config/config.go | - |
+|  | allow_credentials | true | 是否允许凭证 | CORS_ALLOW_CREDENTIALS | core/config/config.go | - |
+| **swagger** | enabled | true | 是否启用Swagger文档 | SWAGGER_ENABLED | core/config/config.go | 生产环境建议关闭 |
+|  | path | /swagger | Swagger文档路径 | SWAGGER_PATH | core/config/config.go | - |
 
 ### 11.2 开发与部署命令速查表
 
@@ -1777,25 +1833,25 @@ go mod tidy
 | 命令 | 说明 | 示例 |
 |------|------|------|
 | `go mod tidy` | 安装依赖并清理未使用的依赖 | `go mod tidy` |
-| `go run cmd/server/main.go` | 运行应用（开发模式） | `go run cmd/server/main.go` |
-| `go run cmd/server/main.go -env dev` | 指定环境运行应用 | `go run cmd/server/main.go -env dev` |
-| `go build -o rbac_admin_server cmd/server/main.go` | 构建应用 | `go build -o rbac_admin_server cmd/server/main.go` |
+| `go run main.go` | 运行应用（开发模式） | `go run main.go` |
+| `go run main.go -settings settings_dev.yaml` | 指定配置文件运行应用 | `go run main.go -settings settings_dev.yaml` |
+| `go build -o rbac_admin_server main.go` | 构建应用 | `go build -o rbac_admin_server main.go` |
 | `go test ./...` | 运行所有测试 | `go test ./...` |
-| `go test -v ./internal/service` | 运行特定包的测试（详细输出） | `go test -v ./internal/service` |
+| `go test -v ./api/service` | 运行特定包的测试（详细输出） | `go test -v ./api/service` |
 | `golangci-lint run` | 运行代码质量检查 | `golangci-lint run` |
 | `go fmt ./...` | 格式化代码 | `go fmt ./...` |
 | `go vet ./...` | 静态代码分析 | `go vet ./...` |
-| `swag init -g cmd/server/main.go` | 生成Swagger文档 | `swag init -g cmd/server/main.go` |
+| `swag init -g main.go` | 生成Swagger文档 | `swag init -g main.go` |
 
 #### 11.2.2 测试环境命令
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
 | `source .env.test` | 加载测试环境变量 | `source .env.test` |
-| `./rbac_admin_server -env test` | 启动测试环境服务 | `./rbac_admin_server -env test` |
-| `curl http://localhost:8080/health` | 健康检查 | `curl http://localhost:8080/health` |
-| `mysql -u test_user -p -e "USE rbac_admin_test; SHOW TABLES;"` | 查看测试数据库表结构 | `mysql -u test_user -p -e "USE rbac_admin_test; SHOW TABLES;"` |
-| `redis-cli -h localhost -p 6379 -n 1 PING` | 测试Redis连接 | `redis-cli -h localhost -p 6379 -n 1 PING` |
+| `./rbac_admin_server -settings settings_test.yaml` | 启动测试环境服务 | `./rbac_admin_server -settings settings_test.yaml` |
+| `curl http://localhost:8080/api/v1/system/public/info` | 公共接口验证 | `curl http://localhost:8080/api/v1/system/public/info` |
+| `mysql -u test_user -p -e "USE rbac_admin_server_test; SHOW TABLES;"` | 查看测试数据库表结构 | `mysql -u test_user -p -e "USE rbac_admin_server_test; SHOW TABLES;"` |
+| `redis-cli -h localhost -p 6379 -n 0 PING` | 测试Redis连接 | `redis-cli -h localhost -p 6379 -n 0 PING` |
 
 #### 11.2.3 生产环境命令
 
@@ -1812,6 +1868,7 @@ go mod tidy
 | `nginx -t` | 检查Nginx配置语法 | `nginx -t` |
 | `systemctl reload nginx` | 重载Nginx配置 | `systemctl reload nginx` |
 | `systemctl restart nginx` | 重启Nginx服务 | `systemctl restart nginx` |
+| `curl -X POST -H "Content-Type: application/json" -d '{"username":"admin","password":"admin123"}' http://localhost:8080/api/v1/system/auth/login` | 测试登录接口 | `curl -X POST -H "Content-Type: application/json" -d '{"username":"admin","password":"admin123"}' http://localhost:8080/api/v1/system/auth/login` |
 
 #### 11.2.4 Docker相关命令
 
@@ -1833,5 +1890,6 @@ go mod tidy
 
 | 版本 | 发布日期 | 更新内容 | 责任人 |
 |------|---------|---------|--------|
+| v1.2.0 | 2024-04-10 | 更新项目结构为模块化设计，调整核心组件实现，优化配置加载机制，更新Docker部署方案，完善配置文档和命令说明 | 开发团队 |
 | v1.1.0 | 2024-03-15 | 更新配置系统为模块化设计，调整环境变量命名规则，更新配置文件结构 | 开发团队 |
 | v1.0.0 | 2023-12-01 | 初始版本 | 开发团队 |

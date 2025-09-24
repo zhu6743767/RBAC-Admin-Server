@@ -2,9 +2,9 @@
 echo 🚀 启动RBAC管理服务器...
 
 REM 检查是否有编译好的可执行文件
-if exist rbac.admin.exe (
-    echo 📦 使用已编译的rbac.admin.exe
-    start "" rbac.admin.exe -env dev
+if exist rbac_admin_server.exe (
+    echo 📦 使用已编译的rbac_admin_server.exe
+    start "" rbac_admin_server.exe -env dev
 ) else (
     echo 🔨 使用go run启动服务器
     start "" cmd /c "go run main.go -env dev"

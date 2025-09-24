@@ -1,11 +1,25 @@
 package routes
 
 import (
-	"rbac.admin/api"
-	"rbac.admin/middleware"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+	"rbac_admin_server/api"
+	"rbac_admin_server/api/user_api"
+	"rbac_admin_server/global"
+	"rbac_admin_server/middleware"
 )
+
+// SetDebugMode 设置Gin为调试模式
+func SetDebugMode() {
+	gin.SetMode(gin.DebugMode)
+}
+
+// SetReleaseMode 设置Gin为发布模式
+func SetReleaseMode() {
+	gin.SetMode(gin.ReleaseMode)
+}
 
 // SetupRouter 设置路由
 func SetupRouter() *gin.Engine {
@@ -15,90 +29,69 @@ func SetupRouter() *gin.Engine {
 	// 设置跨域中间件
 	r.Use(middleware.Cors())
 
-	// 设置静态文件
-	r.Static("/static", "./static")
+	// 设置静态文件目录
+	r.Static("/uploads", "./uploads")
 
-	// 设置API路由
-	apiGroup := r.Group("/api")
+	// 初始化API
+	api.InitApi()
+
+	// 创建用户API实例用于处理登录和注册
+	userApi := user_api.NewUserApi()
+
+	// 公共路由组
+	public := r.Group("/public")
 	{
-		// 公共路由
-		publicGroup := apiGroup.Group("/public")
-		{
-			publicGroup.POST("/login", api.Login)
-			publicGroup.POST("/register", api.Register)
-			publicGroup.POST("/refresh-token", api.RefreshToken)
-		}
+		// 登录接口
+		public.POST("/login", userApi.Login)
+		// 注册接口
+		public.POST("/register", userApi.Register)
+	}
 
-		// 需要认证的路由
-		authGroup := apiGroup.Group("/admin")
-		authGroup.Use(middleware.Auth())
-		{
-			// 用户管理
-			authGroup.GET("/user/list", api.GetUserList)
-			authGroup.POST("/user/create", api.CreateUser)
-			authGroup.PUT("/user/update", api.UpdateUser)
-			authGroup.DELETE("/user/delete", api.DeleteUser)
+	// 需要认证的路由组
+	admin := r.Group("/admin")
+	admin.Use(middleware.Auth())
+	{
+		// 用户管理模块
+		api.App.UserApi.RegisterRoutes(admin)
 
-			// 角色管理
-			roleGroup := authGroup.Group("/role")
-			{
-				roleGroup.GET("/list", api.GetRoleList)
-				roleGroup.POST("/create", api.CreateRole)
-				roleGroup.PUT("/update", api.UpdateRole)
-				roleGroup.DELETE("/delete", api.DeleteRole)
-			}
+		// 角色管理模块
+		api.App.RoleApi.RegisterRoutes(admin)
 
-			// 权限管理
-			permissionGroup := authGroup.Group("/permission")
-			{
-				permissionGroup.GET("/list", api.GetPermissionList)
-				permissionGroup.POST("/create", api.CreatePermission)
-				permissionGroup.PUT("/update", api.UpdatePermission)
-				permissionGroup.DELETE("/delete", api.DeletePermission)
-			}
+		// 权限管理模块
+		api.App.PermissionApi.RegisterRoutes(admin)
 
-			// 部门管理
-			deptGroup := authGroup.Group("/dept")
-			{
-				deptGroup.GET("/list", api.GetDepartmentList)
-				deptGroup.POST("/create", api.CreateDepartment)
-				deptGroup.PUT("/update", api.UpdateDepartment)
-				deptGroup.DELETE("/delete", api.DeleteDepartment)
-			}
+		// 部门管理模块
+		api.App.DeptApi.RegisterRoutes(admin)
 
-			// 菜单管理
-			menuGroup := authGroup.Group("/menu")
-			{
-				menuGroup.GET("/list", api.GetMenuList)
-				menuGroup.POST("/create", api.CreateMenu)
-				menuGroup.PUT("/update", api.UpdateMenu)
-				menuGroup.DELETE("/delete", api.DeleteMenu)
-			}
+		// 菜单管理模块
+		api.App.MenuApi.RegisterRoutes(admin)
 
-			// 文件管理
-			fileGroup := authGroup.Group("/file")
-			{
-				fileGroup.POST("/upload", api.UploadFile)
-				fileGroup.GET("/list", api.GetFileList)
-				fileGroup.DELETE("/delete", api.DeleteFile)
-			}
+		// 文件管理模块
+		api.App.FileApi.RegisterRoutes(admin)
 
-			// 日志管理
-			logGroup := authGroup.Group("/log")
-			{
-				logGroup.GET("/list", api.GetLogList)
-				logGroup.DELETE("/delete", api.DeleteLog)
-			}
+		// 日志管理模块
+		api.App.LogApi.RegisterRoutes(admin)
 
-			// 个人中心
-			profileGroup := authGroup.Group("/profile")
-			{
-				profileGroup.GET("/info", api.GetProfile)
-				profileGroup.PUT("/update", api.UpdateProfile)
-				profileGroup.PUT("/password", api.UpdatePassword)
-			}
-		}
+		// 个人中心模块
+		api.App.ProfileApi.RegisterRoutes(admin)
 	}
 
 	return r
+}
+
+// Run 运行路由和HTTP服务器
+func Run() {
+	// 创建路由
+	router := SetupRouter()
+
+	// 获取系统配置
+	s := global.Config.System
+
+	// 启动HTTP服务器
+	logrus.Infof("后端服务运行在 http://%s:%d", s.IP, s.Port)
+
+	// 启动服务器
+	if err := router.Run(fmt.Sprintf("%s:%d", s.IP, s.Port)); err != nil {
+		logrus.Fatalf("服务器启动失败: %v", err)
+	}
 }

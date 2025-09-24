@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"rbac.admin/config"
-	"rbac.admin/global"
+	"rbac_admin_server/config"
+	"rbac_admin_server/global"
 )
 
 // InitLogger 初始化日志系统

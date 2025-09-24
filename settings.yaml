@@ -50,6 +50,16 @@ jwt:
   issuer: "rbac-admin-server"                # Token签发者
   audience: "rbac-client"                    # Token受众
 
+email:
+    user: 315420498@qq.com  # 发送者邮箱地址
+    password: zmkbniplmiqmbjag  # 授权密码
+    Host: smtp.qq.com  # 邮箱服务器
+    Port: 465  # 端口
+
+captcha:
+    enable: true
+
+
 # 🌐 CORS配置
 cors:
   enable: true                 # 是否启用CORS

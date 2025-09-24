@@ -10,8 +10,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
-	"rbac.admin/config"
-	"rbac.admin/global"
+	"rbac_admin_server/config"
+	"rbac_admin_server/global"
 
 	// 纯Go SQLite驱动，无需CGO
 	glebarezsqlite "github.com/glebarez/sqlite"
@@ -24,80 +24,12 @@ var (
 	SQLDB *sql.DB
 )
 
-// InitGorm 初始化GORM数据库连接
+// InitGorm 初始化GORM数据库连接（废弃，请使用init_gorm包中的InitGorm函数）
 // 支持MySQL、PostgreSQL、SQLite三种数据库
 // 自动配置连接池参数，支持日志级别设置
 func InitGorm(cfg *config.DBConfig) error {
-	var dialector gorm.Dialector
-
-	// 验证配置
-	if cfg == nil {
-		return fmt.Errorf("数据库配置为空")
-	}
-
-	// 根据数据库类型选择驱动
-	switch cfg.Mode {
-	case "mysql":
-		dialector = mysql.Open(buildMysqlDSN(cfg))
-	case "pgsql", "postgres", "postgresql":
-		dialector = postgres.Open(buildPostgresDSN(cfg))
-	case "sqlite":
-		// 使用纯Go SQLite驱动，无需CGO
-		dialector = glebarezsqlite.Open(buildSqliteDSN(cfg))
-	default:
-		return fmt.Errorf("不支持的数据库类型: %s", cfg.Mode)
-	}
-
-	// GORM配置
-	gormConfig := &gorm.Config{
-		// 命名策略（使用单数表名）
-		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true,
-		},
-		// 禁用外键约束
-		DisableForeignKeyConstraintWhenMigrating: true,
-	}
-
-	// 日志级别（默认Info级别）
-	gormConfig.Logger = logger.Default.LogMode(logger.Info)
-
-	// 打开数据库连接
-	db, err := gorm.Open(dialector, gormConfig)
-	if err != nil {
-		return fmt.Errorf("数据库连接失败: %v", err)
-	}
-
-	// 获取底层SQL连接
-	sqlDB, err := db.DB()
-	if err != nil {
-		return fmt.Errorf("获取SQL连接失败: %v", err)
-	}
-
-	// 设置连接池参数（使用配置文件中的值）
-	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
-	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
-	sqlDB.SetConnMaxLifetime(time.Duration(cfg.ConnMaxLifetime) * time.Hour)
-
-	// 测试连接
-	if err := sqlDB.Ping(); err != nil {
-		return fmt.Errorf("数据库连接测试失败: %v", err)
-	}
-
-	DB = db
-	SQLDB = sqlDB
-
-	// 日志输出连接信息（使用全局日志系统）
-	if cfg.Mode == "sqlite" {
-		global.Logger.Infof("✅ 数据库连接成功: SQLite @ %s", cfg.Path)
-	} else {
-		global.Logger.Infof("✅ 数据库连接成功: %s@%s:%d/%s", cfg.User, cfg.Host, cfg.Port, cfg.DbNAME)
-	}
-
-	// 记录连接池配置
-	global.Logger.Infof("🔧 数据库连接池配置: MaxIdleConns=%d, MaxOpenConns=%d, MaxLifetime=%v",
-		cfg.MaxIdleConns, cfg.MaxOpenConns, time.Duration(cfg.ConnMaxLifetime)*time.Hour)
-
-	return nil
+	global.Logger.Warnf("⚠️ core/InitGorm已废弃，请使用init_gorm包中的InitGorm函数")
+	return fmt.Errorf("该函数已废弃，请使用init_gorm包中的InitGorm函数")
 }
 
 // buildMysqlDSN 构建MySQL连接字符串
@@ -146,20 +78,38 @@ func buildSqliteDSN(cfg *config.DBConfig) string {
 
 // CloseDB 关闭数据库连接
 func CloseDB() error {
-	if SQLDB != nil {
-		return SQLDB.Close()
+	if global.DB != nil {
+		sqlDB, err := global.DB.DB()
+		if err == nil {
+			global.Logger.Info("🔄 正在关闭数据库连接...")
+			return sqlDB.Close()
+		}
+		return err
 	}
 	return nil
 }
 
 // GetDB 获取数据库连接
 func GetDB() *gorm.DB {
-	return DB
+	return global.DB
 }
 
 // GetSQLDB 获取SQL数据库连接
 func GetSQLDB() *sql.DB {
 	return SQLDB
+}
+
+// CloseRedis 关闭Redis连接
+func CloseRedis() error {
+	if global.Redis != nil {
+		global.Logger.Info("🔄 正在关闭Redis连接...")
+		if err := global.Redis.Close(); err != nil {
+			global.Logger.Errorf("❌ Redis连接关闭失败: %v", err)
+			return err
+		}
+		global.Logger.Info("✅ Redis连接已关闭")
+	}
+	return nil
 }
 
 // AutoMigrate 自动迁移数据库表结构

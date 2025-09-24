@@ -2,7 +2,7 @@ package global
 
 import (
 	"errors"
-	"rbac.admin/models"
+	"rbac_admin_server/models"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"

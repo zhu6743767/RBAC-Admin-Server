@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"rbac.admin/global"
+	"rbac_admin_server/global"
 )
 
 // RedisCtx 全局Redis上下文
@@ -70,6 +70,7 @@ func InitRedis() error {
 // CloseRedis 关闭Redis连接
 func CloseRedis() error {
 	if global.Redis != nil {
+		global.Logger.Info("🔄 正在关闭Redis连接...")
 		return global.Redis.Close()
 	}
 	return nil
