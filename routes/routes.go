@@ -6,9 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"rbac_admin_server/api"
+	"rbac_admin_server/api/captcha_api"
+	"rbac_admin_server/api/email_api"
 	"rbac_admin_server/api/user_api"
 	"rbac_admin_server/global"
 	"rbac_admin_server/middleware"
+	"rbac_admin_server/utils/captcha"
 )
 
 // SetDebugMode 设置Gin为调试模式
@@ -35,8 +38,16 @@ func SetupRouter() *gin.Engine {
 	// 初始化API
 	api.InitApi()
 
-	// 创建用户API实例用于处理登录和注册
+	// 注册健康检查路由
+	api.App.HealthApi.RegisterRoutes(r)
+
+	// 启动邮件验证码清理定时器
+	captcha.EmailStore.StartCleanupTimer()
+
+	// 创建API实例
 	userApi := user_api.NewUserApi()
+	captchaApi := &captcha_api.CaptchaApi{}
+	emailApi := &email_api.EmailApi{}
 
 	// 公共路由组
 	public := r.Group("/public")
@@ -45,10 +56,15 @@ func SetupRouter() *gin.Engine {
 		public.POST("/login", userApi.Login)
 		// 注册接口
 		public.POST("/register", userApi.Register)
+		// 验证码路由
+		captchaApi.RegisterRoutes(public)
+		// 邮箱路由
+		emailApi.RegisterRoutes(public)
 	}
 
 	// 需要认证的路由组
 	admin := r.Group("/admin")
+	// 使用Auth中间件进行身份验证，而不是JWTAuth
 	admin.Use(middleware.Auth())
 	{
 		// 用户管理模块

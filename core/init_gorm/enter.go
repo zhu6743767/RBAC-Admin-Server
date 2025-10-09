@@ -2,14 +2,14 @@ package init_gorm
 
 import (
 	"fmt"
-	"rbac_admin_server/config"
+	"time"
+	
+	"github.com/sirupsen/logrus"
 	"rbac_admin_server/global"
 	"rbac_admin_server/models"
-
-	"github.com/sirupsen/logrus"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
@@ -51,14 +51,14 @@ func InitGorm() (*gorm.DB, error) {
 	switch config.Mode {
 	case "mysql":
 		dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-			config.User, config.Password, config.Host, config.Port, config.DBName)
+				config.User, config.Password, config.Host, config.Port, config.DbNAME)
 		db, err = gorm.Open(mysql.Open(dsn), dbConfig)
 	case "postgres":
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=Asia/Shanghai",
-			config.Host, config.User, config.Password, config.DBName, config.Port)
+				config.Host, config.User, config.Password, config.DbNAME, config.Port)
 		db, err = gorm.Open(postgres.Open(dsn), dbConfig)
 	case "sqlite":
-		db, err = gorm.Open(sqlite.Open(config.DBName), dbConfig)
+		db, err = gorm.Open(sqlite.Open(config.DbNAME), dbConfig)
 	default:
 		return nil, fmt.Errorf("不支持的数据库类型: %s", config.Mode)
 	}
@@ -76,7 +76,7 @@ func InitGorm() (*gorm.DB, error) {
 	// 设置连接池参数
 	sqlDB.SetMaxIdleConns(config.MaxIdleConns)
 	sqlDB.SetMaxOpenConns(config.MaxOpenConns)
-	sqlDB.SetConnMaxLifetime(config.ConnMaxLifetime)
+	sqlDB.SetConnMaxLifetime(time.Duration(config.ConnMaxLifetime) * time.Second)
 
 	logrus.Info("✅ 数据库连接初始化成功")
 	return db, nil

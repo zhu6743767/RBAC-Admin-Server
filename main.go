@@ -1,47 +1,51 @@
 package main
 
 import (
-	"flag"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"rbac_admin_server/core"
+	"rbac_admin_server/flags"
 	"rbac_admin_server/global"
 	"rbac_admin_server/routes"
 
 	"github.com/sirupsen/logrus"
 )
 
-// 命令行参数定义
-var (
-	configFile = flag.String("settings", "settings.yaml", "配置文件路径")
-)
-
 func main() {
-	flag.Parse()
+	// 解析命令行参数
+	args := flags.ParseCommandLineArgs()
 
-	// 初始化日志
-	core.InitLogger("logs")
-
-	// 加载配置
-	global.Config = core.ReadConfig(*configFile)
-
-	// 初始化系统核心组件
-	if err := core.InitSystem(); err != nil {
-		global.Logger.Fatalf("❌ 系统初始化失败: %v", err)
+	// 处理命令行参数
+	if err := flags.HandleCommandLineArgs(args); err != nil {
+		logrus.Fatalf("❌ 命令处理失败: %v", err)
 	}
 
-	// 启动应用
-	routes.Run()
+	// 如果是服务器模式，则启动服务器
+	if args.Mode == flags.ModeServer {
+		// 初始化系统核心组件
+		global.Logger.Info("开始初始化系统核心组件...")
+		if err := core.InitSystem(); err != nil {
+			global.Logger.Fatalf("❌ 系统初始化失败: %v", err)
+		}
+		global.Logger.Info("✅ 系统核心组件初始化完成")
 
-	// 等待系统信号，优雅退出
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
+		// 启动应用
+		global.Logger.Info("开始启动HTTP服务器...")
+		routes.Run()
 
-	// 清理系统资源
-	core.CleanupSystem()
+		// 等待系统信号，优雅退出
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+		<-sigChan
 
-	logrus.Info("✅ 服务已优雅停止")
+		// 清理系统资源
+		core.CleanupSystem()
+
+		global.Logger.Info("✅ 服务已优雅停止")
+	} else {
+		// 非服务器模式，处理完成后退出
+		global.Logger.Info("✅ 命令执行完成")
+	}
 }

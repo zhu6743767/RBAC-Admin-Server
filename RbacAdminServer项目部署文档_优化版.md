@@ -1220,12 +1220,23 @@ curl http://localhost:8080/health
 curl http://localhost:8080/health/detail
 ```
 
-#### 9.1.2 自定义健康检查配置
-可以在配置文件中自定义健康检查设置：
+#### 9.1.2 自定义监控配置
+可以在配置文件中自定义完整的监控设置：
 ```yaml
+# 📊 监控配置
 monitoring:
-  health_check_path: /health
-  health_check_interval: 60  # 内部健康检查间隔（秒）
+  enabled: true                 # 是否启用监控功能
+  prometheus_port: 9090         # Prometheus监控端口
+  health_check_path: /health    # 健康检查API路径
+  metrics_path: /metrics        # Prometheus指标收集路径
+  trace_sampling_rate: 0.1      # 分布式追踪采样率（0-1之间）
+
+# 🎨 验证码配置
+captcha:
+  width: 120                    # 验证码图片宽度
+  height: 40                    # 验证码图片高度
+  length: 4                     # 验证码字符长度
+  expire_seconds: 300           # 验证码有效期（秒）
 ```
 
 #### 9.1.3 外部监控集成

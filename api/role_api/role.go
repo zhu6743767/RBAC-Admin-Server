@@ -15,7 +15,7 @@ import (
 // @Produce json
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]models.Role}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/role/list [get]
+// @Router /admin/role/list [get]
 func (r *RoleApi) GetRoleList(c *gin.Context) {
 	var roles []models.Role
 	if err := global.DB.Find(&roles).Error; err != nil {
@@ -41,7 +41,7 @@ func (r *RoleApi) GetRoleList(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/role/create [post]
+// @Router /admin/role/create [post]
 func (r *RoleApi) CreateRole(c *gin.Context) {
 	var role models.Role
 	if err := c.ShouldBindJSON(&role); err != nil {
@@ -82,7 +82,7 @@ func (r *RoleApi) CreateRole(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/role/update [put]
+// @Router /admin/role/update [put]
 func (r *RoleApi) UpdateRole(c *gin.Context) {
 	var role models.Role
 	if err := c.ShouldBindJSON(&role); err != nil {
@@ -120,7 +120,7 @@ func (r *RoleApi) UpdateRole(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/role/delete [delete]
+// @Router /admin/role/delete [delete]
 func (r *RoleApi) DeleteRole(c *gin.Context) {
 	id := c.Query("id")
 	if id == "" {
@@ -169,7 +169,7 @@ func (r *RoleApi) DeleteRole(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]models.Permission}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/role/permissions [get]
+// @Router /admin/role/permissions [get]
 func (r *RoleApi) GetRolePermissions(c *gin.Context) {
 	roleID := c.Query("role_id")
 	if roleID == "" {
@@ -206,7 +206,7 @@ func (r *RoleApi) GetRolePermissions(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/role/set-permissions [post]
+// @Router /admin/role/set-permissions [post]
 func (r *RoleApi) SetRolePermissions(c *gin.Context) {
 	var req struct {
 		RoleID        int   `json:"role_id" binding:"required"`
@@ -238,8 +238,8 @@ func (r *RoleApi) SetRolePermissions(c *gin.Context) {
 	// 添加新的权限关联
 	for _, permissionID := range req.PermissionIDs {
 		rolePermission := models.RolePermission{
-			RoleID:       req.RoleID,
-			PermissionID: permissionID,
+			RoleID:       uint(req.RoleID),
+			PermissionID: uint(permissionID),
 		}
 		if err := tx.Create(&rolePermission).Error; err != nil {
 			global.Logger.Error("添加角色权限关联失败: " + err.Error())
@@ -269,7 +269,7 @@ func (r *RoleApi) SetRolePermissions(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]models.User}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/role/users [get]
+// @Router /admin/role/users [get]
 func (r *RoleApi) GetRoleUsers(c *gin.Context) {
 	roleID := c.Query("role_id")
 	if roleID == "" {

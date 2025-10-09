@@ -15,7 +15,7 @@ import (
 // @Produce json
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]models.Department}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/dept/list [get]
+// @Router /admin/dept/list [get]
 func (d *DepartmentApi) GetDepartmentList(c *gin.Context) {
 	var departments []models.Department
 	if err := global.DB.Find(&departments).Error; err != nil {
@@ -41,7 +41,7 @@ func (d *DepartmentApi) GetDepartmentList(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/dept/create [post]
+// @Router /admin/dept/create [post]
 func (d *DepartmentApi) CreateDepartment(c *gin.Context) {
 	var department models.Department
 	if err := c.ShouldBindJSON(&department); err != nil {
@@ -82,7 +82,7 @@ func (d *DepartmentApi) CreateDepartment(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/dept/update [put]
+// @Router /admin/dept/update [put]
 func (d *DepartmentApi) UpdateDepartment(c *gin.Context) {
 	var department models.Department
 	if err := c.ShouldBindJSON(&department); err != nil {
@@ -120,7 +120,7 @@ func (d *DepartmentApi) UpdateDepartment(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/dept/delete [delete]
+// @Router /admin/dept/delete [delete]
 func (d *DepartmentApi) DeleteDepartment(c *gin.Context) {
 	id := c.Query("id")
 	if id == "" {
@@ -168,7 +168,7 @@ func (d *DepartmentApi) DeleteDepartment(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]gin.H{"id":int, "name":string, "children":[]gin.H}}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/dept/tree [get]
+// @Router /admin/dept/tree [get]
 func (d *DepartmentApi) GetDepartmentTree(c *gin.Context) {
 	var departments []models.Department
 	if err := global.DB.Order("sort").Find(&departments).Error; err != nil {
@@ -218,7 +218,7 @@ func buildDepartmentTree(departments []models.Department, parentID uint) []gin.H
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]models.User}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/dept/users [get]
+// @Router /admin/dept/users [get]
 func (d *DepartmentApi) GetDepartmentUsers(c *gin.Context) {
 	deptID := c.Query("dept_id")
 	if deptID == "" {

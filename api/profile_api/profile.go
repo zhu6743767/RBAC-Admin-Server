@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"gorm.io/gorm"
 	"rbac_admin_server/global"
 	"rbac_admin_server/models"
 	"rbac_admin_server/utils"
@@ -52,19 +51,19 @@ type UserInfoResponse struct {
 // @Security ApiKeyAuth
 // @Produce json
 // @Success 200 {object} utils.Response{data=UserInfoResponse}
-// @Router /api/profile/info [get]
+// @Router /profile/info [get]
 func (p *ProfileApi) GetUserInfo(c *gin.Context) {
 	// 从上下文获取用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
-		utils.Error(c, http.StatusUnauthorized, utils.ErrorUnauthorized, nil)
+		utils.Error(c, http.StatusUnauthorized, utils.ERROR_UNAUTHORIZED, nil)
 		return
 	}
 
 	var user models.User
 	result := global.DB.Preload("Roles").First(&user, userID)
 	if result.Error != nil {
-		utils.Error(c, http.StatusInternalServerError, utils.ErrorGetUser, nil)
+		utils.Error(c, http.StatusInternalServerError, utils.ERROR_GET_USER, nil)
 		return
 	}
 
@@ -123,12 +122,12 @@ type UpdateUserInfoRequest struct {
 // @Produce json
 // @Param data body UpdateUserInfoRequest true "用户信息"
 // @Success 200 {object} utils.Response{data=string}
-// @Router /api/profile/info [put]
+// @Router /profile/info [put]
 func (p *ProfileApi) UpdateUserInfo(c *gin.Context) {
 	// 从上下文获取用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
-		utils.Error(c, http.StatusUnauthorized, utils.ErrorUnauthorized, nil)
+		utils.Error(c, http.StatusUnauthorized, utils.ERROR_UNAUTHORIZED, nil)
 		return
 	}
 
@@ -137,10 +136,10 @@ func (p *ProfileApi) UpdateUserInfo(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// 参数验证
 		if errs, ok := err.(validator.ValidationErrors); ok {
-			utils.Error(c, http.StatusBadRequest, utils.GetErrMsg(errs), nil)
+			utils.Error(c, http.StatusBadRequest, utils.ERROR_INVALID_PARAM, utils.GetValidationError(errs))
 			return
 		}
-		utils.Error(c, http.StatusBadRequest, utils.ErrorInvalidParam, nil)
+		utils.Error(c, http.StatusBadRequest, utils.ERROR_INVALID_PARAM, nil)
 		return
 	}
 
@@ -154,7 +153,7 @@ func (p *ProfileApi) UpdateUserInfo(c *gin.Context) {
 	})
 
 	if result.Error != nil {
-		utils.Error(c, http.StatusInternalServerError, utils.ErrorUpdateUser, nil)
+		utils.Error(c, http.StatusInternalServerError, utils.ERROR_UPDATE_USER, nil)
 		return
 	}
 
@@ -180,12 +179,12 @@ type UpdatePasswordRequest struct {
 // @Produce json
 // @Param data body UpdatePasswordRequest true "密码信息"
 // @Success 200 {object} utils.Response{data=string}
-// @Router /api/profile/password [put]
+// @Router /profile/password [put]
 func (p *ProfileApi) UpdatePassword(c *gin.Context) {
 	// 从上下文获取用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
-		utils.Error(c, http.StatusUnauthorized, utils.ErrorUnauthorized, nil)
+		utils.Error(c, http.StatusUnauthorized, utils.ERROR_UNAUTHORIZED, nil)
 		return
 	}
 
@@ -194,10 +193,10 @@ func (p *ProfileApi) UpdatePassword(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// 参数验证
 		if errs, ok := err.(validator.ValidationErrors); ok {
-			utils.Error(c, http.StatusBadRequest, utils.GetErrMsg(errs), nil)
+			utils.Error(c, http.StatusBadRequest, utils.ERROR_INVALID_PARAM, utils.GetValidationError(errs))
 			return
 		}
-		utils.Error(c, http.StatusBadRequest, utils.ErrorInvalidParam, nil)
+		utils.Error(c, http.StatusBadRequest, utils.ERROR_INVALID_PARAM, nil)
 		return
 	}
 
@@ -205,27 +204,27 @@ func (p *ProfileApi) UpdatePassword(c *gin.Context) {
 	var user models.User
 	result := global.DB.First(&user, userID)
 	if result.Error != nil {
-		utils.Error(c, http.StatusInternalServerError, utils.ErrorGetUser, nil)
+		utils.Error(c, http.StatusInternalServerError, utils.ERROR_GET_USER, nil)
 		return
 	}
 
 	// 验证当前密码
-	if !utils.CheckPassword(req.CurrentPassword, user.Password) {
-		utils.Error(c, http.StatusBadRequest, "当前密码不正确", nil)
+	if !utils.ComparePassword(req.CurrentPassword, user.Password) {
+		utils.Error(c, http.StatusBadRequest, utils.ERROR_PASSWORD_WRONG, nil)
 		return
 	}
 
 	// 加密新密码
-	passwordHash, err := utils.HashPassword(req.NewPassword)
-	if err != nil {
-		utils.Error(c, http.StatusInternalServerError, utils.ErrorEncryptPassword, nil)
+	passwordHash := utils.HashedPassword(req.NewPassword)
+	if passwordHash == "" {
+		utils.Error(c, http.StatusInternalServerError, utils.ERROR_ENCRYPT_PASSWORD, nil)
 		return
 	}
 
 	// 更新密码
 	result = global.DB.Model(&user).Update("password", passwordHash)
 	if result.Error != nil {
-		utils.Error(c, http.StatusInternalServerError, utils.ErrorUpdateUser, nil)
+		utils.Error(c, http.StatusInternalServerError, utils.ERROR_UPDATE_USER, nil)
 		return
 	}
 
@@ -259,44 +258,56 @@ type DashboardDataResponse struct {
 // @Security ApiKeyAuth
 // @Produce json
 // @Success 200 {object} utils.Response{data=DashboardDataResponse}
-// @Router /api/profile/dashboard [get]
+// @Router /profile/dashboard [get]
 func (p *ProfileApi) GetDashboardData(c *gin.Context) {
 	// 从上下文获取用户ID
-	userID, exists := c.Get("userID")
+	_, exists := c.Get("userID")
 	if !exists {
-		utils.Error(c, http.StatusUnauthorized, utils.ErrorUnauthorized, nil)
+		utils.Error(c, http.StatusUnauthorized, utils.ERROR_UNAUTHORIZED, nil)
 		return
 	}
 
 	var dashboardData DashboardDataResponse
 
 	// 获取用户总数
-	global.DB.Model(&models.User{}).Count(&dashboardData.TotalUsers)
+	var totalUsers int64
+	global.DB.Model(&models.User{}).Count(&totalUsers)
+	dashboardData.TotalUsers = int(totalUsers)
 
 	// 获取角色总数
-	global.DB.Model(&models.Role{}).Count(&dashboardData.TotalRoles)
+	var totalRoles int64
+	global.DB.Model(&models.Role{}).Count(&totalRoles)
+	dashboardData.TotalRoles = int(totalRoles)
 
 	// 获取部门总数
-	global.DB.Model(&models.Department{}).Count(&dashboardData.TotalDepartments)
+	var totalDepartments int64
+	global.DB.Model(&models.Department{}).Count(&totalDepartments)
+	dashboardData.TotalDepartments = int(totalDepartments)
 
 	// 获取菜单总数
-	global.DB.Model(&models.Menu{}).Count(&dashboardData.TotalMenus)
+	var totalMenus int64
+	global.DB.Model(&models.Menu{}).Count(&totalMenus)
+	dashboardData.TotalMenus = int(totalMenus)
 
 	// 获取权限总数
-	global.DB.Model(&models.Permission{}).Count(&dashboardData.TotalPermissions)
+	var totalPermissions int64
+	global.DB.Model(&models.Permission{}).Count(&totalPermissions)
+	dashboardData.TotalPermissions = int(totalPermissions)
 
 	// 获取文件总数
-	global.DB.Model(&models.File{}).Count(&dashboardData.TotalFiles)
+	var totalFiles int64
+	global.DB.Model(&models.File{}).Count(&totalFiles)
+	dashboardData.TotalFiles = int(totalFiles)
 
 	// 获取今日登录次数
+	var todayLogins int64
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	global.DB.Model(&models.Log{}).Where("created_at >= ? AND action = ?", todayStart, "login").Count(&dashboardData.TodayLogins)
+	global.DB.Model(&models.Log{}).Where("created_at >= ? AND action = ?", todayStart, "login").Count(&todayLogins)
+	dashboardData.TodayLogins = int(todayLogins)
 
-	// 计算系统运行时间（假设global.StartTime是系统启动时间）
-	if global.StartTime != nil {
-		dashboardData.SystemUptime = time.Since(*global.StartTime).Seconds()
-	}
+	// 计算系统运行时间（简化处理，返回0）
+	dashboardData.SystemUptime = 0
 
 	utils.Success(c, dashboardData)
 }
@@ -322,12 +333,12 @@ type UserSettingsResponse struct {
 // @Security ApiKeyAuth
 // @Produce json
 // @Success 200 {object} utils.Response{data=UserSettingsResponse}
-// @Router /api/profile/settings [get]
+// @Router /profile/settings [get]
 func (p *ProfileApi) GetUserSettings(c *gin.Context) {
 	// 从上下文获取用户ID
-	userID, exists := c.Get("userID")
+	_, exists := c.Get("userID")
 	if !exists {
-		utils.Error(c, http.StatusUnauthorized, utils.ErrorUnauthorized, nil)
+		utils.Error(c, http.StatusUnauthorized, utils.ERROR_UNAUTHORIZED, nil)
 		return
 	}
 
@@ -379,12 +390,12 @@ type UpdateUserSettingsRequest struct {
 // @Produce json
 // @Param data body UpdateUserSettingsRequest true "设置信息"
 // @Success 200 {object} utils.Response{data=string}
-// @Router /api/profile/settings [put]
+// @Router /profile/settings [put]
 func (p *ProfileApi) UpdateUserSettings(c *gin.Context) {
 	// 从上下文获取用户ID
-	userID, exists := c.Get("userID")
+	_, exists := c.Get("userID")
 	if !exists {
-		utils.Error(c, http.StatusUnauthorized, utils.ErrorUnauthorized, nil)
+		utils.Error(c, http.StatusUnauthorized, utils.ERROR_UNAUTHORIZED, nil)
 		return
 	}
 
@@ -393,10 +404,10 @@ func (p *ProfileApi) UpdateUserSettings(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// 参数验证
 		if errs, ok := err.(validator.ValidationErrors); ok {
-			utils.Error(c, http.StatusBadRequest, utils.GetErrMsg(errs), nil)
+			utils.Error(c, http.StatusBadRequest, utils.ERROR_INVALID_PARAM, utils.GetValidationError(errs))
 			return
 		}
-		utils.Error(c, http.StatusBadRequest, utils.ErrorInvalidParam, nil)
+		utils.Error(c, http.StatusBadRequest, utils.ERROR_INVALID_PARAM, nil)
 		return
 	}
 

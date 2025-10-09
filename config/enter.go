@@ -14,4 +14,6 @@ type Config struct {
 	Performance  PerformanceConfig `yaml:"performance"`
 	App          AppConfig        `yaml:"app"`
 	Upload       UploadConfig     `yaml:"upload"`
+	Email        Email            `yaml:"email"`
+	Captcha      Captcha          `yaml:"captcha"`
 }

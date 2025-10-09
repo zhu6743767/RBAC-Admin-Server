@@ -15,7 +15,7 @@ import (
 // @Produce json
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]models.Permission}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/permission/list [get]
+// @Router /admin/permission/list [get]
 func (p *PermissionApi) GetPermissionList(c *gin.Context) {
 	var permissions []models.Permission
 	if err := global.DB.Find(&permissions).Error; err != nil {
@@ -41,7 +41,7 @@ func (p *PermissionApi) GetPermissionList(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/permission/create [post]
+// @Router /admin/permission/create [post]
 func (p *PermissionApi) CreatePermission(c *gin.Context) {
 	var permission models.Permission
 	if err := c.ShouldBindJSON(&permission); err != nil {
@@ -82,7 +82,7 @@ func (p *PermissionApi) CreatePermission(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/permission/update [put]
+// @Router /admin/permission/update [put]
 func (p *PermissionApi) UpdatePermission(c *gin.Context) {
 	var permission models.Permission
 	if err := c.ShouldBindJSON(&permission); err != nil {
@@ -120,7 +120,7 @@ func (p *PermissionApi) UpdatePermission(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/permission/delete [delete]
+// @Router /admin/permission/delete [delete]
 func (p *PermissionApi) DeletePermission(c *gin.Context) {
 	id := c.Query("id")
 	if id == "" {
@@ -167,7 +167,7 @@ func (p *PermissionApi) DeletePermission(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]gin.H{"id":int, "name":string, "children":[]gin.H}}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/permission/tree [get]
+// @Router /admin/permission/tree [get]
 func (p *PermissionApi) GetPermissionTree(c *gin.Context) {
 	var permissions []models.Permission
 	if err := global.DB.Order("sort").Find(&permissions).Error; err != nil {
@@ -220,7 +220,7 @@ func buildPermissionTree(permissions []models.Permission, parentID uint) []gin.H
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]int}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/permission/role-permissions [get]
+// @Router /admin/permission/role-permissions [get]
 func (p *PermissionApi) GetRolePermissions(c *gin.Context) {
 	roleID := c.Query("role_id")
 	if roleID == "" {

@@ -20,6 +20,8 @@ type User struct {
 	LastLoginIP  string     `gorm:"size:64;comment:最后登录IP" json:"last_login_ip"`
 	LoginCount   int        `gorm:"type:int;default:0;comment:登录次数" json:"login_count"`
 	DepartmentID uint       `gorm:"comment:部门ID" json:"department_id"`
+	DeptID       uint       `gorm:"comment:部门ID(别名)" json:"dept_id"`
+	Gender       int        `gorm:"type:tinyint;default:0;comment:性别(0:未知,1:男,2:女)" json:"gender"`
 	Department   Department `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
 	Roles        []Role     `gorm:"many2many:user_roles;" json:"roles,omitempty"`
 	IsAdmin      bool       `gorm:"type:tinyint;default:0;comment:是否管理员" json:"is_admin"`
@@ -80,6 +82,8 @@ type Permission struct {
 	Type        string `gorm:"size:32;default:'api';comment:权限类型(api,menu,button)" json:"type"`
 	Method      string `gorm:"size:16;comment:请求方法" json:"method"`
 	Path        string `gorm:"size:128;comment:请求路径" json:"path"`
+	Component   string `gorm:"size:128;comment:组件路径" json:"component"`
+	Icon        string `gorm:"size:64;comment:图标" json:"icon"`
 	Status      int    `gorm:"type:tinyint;default:1;comment:状态(1:正常,2:禁用)" json:"status"`
 	ParentID    uint   `gorm:"default:0;comment:上级权限ID" json:"parent_id"`
 	Sort        int    `gorm:"type:int;default:0;comment:排序" json:"sort"`

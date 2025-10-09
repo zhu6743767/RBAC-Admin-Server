@@ -18,7 +18,7 @@ func (p *ProfileApi) RegisterRoutes(router *gin.RouterGroup) {
 	profileRouter := router.Group("/profile")
 	{
 		// 需要认证的路由
-		profileRouter.Use(middleware.JWTAuth())
+		profileRouter.Use(middleware.Auth())
 		{
 			profileRouter.GET("/info", p.GetUserInfo)           // 获取用户个人信息
 			profileRouter.PUT("/info", p.UpdateUserInfo)         // 更新用户个人信息

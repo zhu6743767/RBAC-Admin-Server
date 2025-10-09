@@ -15,7 +15,7 @@ import (
 // @Produce json
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]models.Permission}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/menu/list [get]
+// @Router /admin/menu/list [get]
 func (m *MenuApi) GetMenuList(c *gin.Context) {
 	var menus []models.Permission
 	if err := global.DB.Where("type in (1, 2)").Order("sort").Find(&menus).Error; err != nil {
@@ -41,7 +41,7 @@ func (m *MenuApi) GetMenuList(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/menu/create [post]
+// @Router /admin/menu/create [post]
 func (m *MenuApi) CreateMenu(c *gin.Context) {
 	var menu models.Permission
 	if err := c.ShouldBindJSON(&menu); err != nil {
@@ -50,8 +50,8 @@ func (m *MenuApi) CreateMenu(c *gin.Context) {
 		return
 	}
 
-	// 菜单类型只能是1(目录)或2(菜单)
-	if menu.Type != 1 && menu.Type != 2 {
+	// 菜单类型只能是dir(目录)或menu(菜单)
+	if menu.Type != "dir" && menu.Type != "menu" {
 		global.Logger.Error("创建菜单参数错误: 菜单类型错误")
 		c.JSON(400, gin.H{"code": 400, "msg": "菜单类型只能是目录或菜单"})
 		return
@@ -89,7 +89,7 @@ func (m *MenuApi) CreateMenu(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/menu/update [put]
+// @Router /admin/menu/update [put]
 func (m *MenuApi) UpdateMenu(c *gin.Context) {
 	var menu models.Permission
 	if err := c.ShouldBindJSON(&menu); err != nil {
@@ -104,8 +104,8 @@ func (m *MenuApi) UpdateMenu(c *gin.Context) {
 		return
 	}
 
-	// 菜单类型只能是1(目录)或2(菜单)
-	if menu.Type != 1 && menu.Type != 2 {
+	// 菜单类型只能是dir(目录)或menu(菜单)
+	if menu.Type != "dir" && menu.Type != "menu" {
 		global.Logger.Error("更新菜单参数错误: 菜单类型错误")
 		c.JSON(400, gin.H{"code": 400, "msg": "菜单类型只能是目录或菜单"})
 		return
@@ -134,7 +134,7 @@ func (m *MenuApi) UpdateMenu(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/menu/delete [delete]
+// @Router /admin/menu/delete [delete]
 func (m *MenuApi) DeleteMenu(c *gin.Context) {
 	id := c.Query("id")
 	if id == "" {
@@ -181,7 +181,7 @@ func (m *MenuApi) DeleteMenu(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]gin.H{"id":int, "name":string, "children":[]gin.H}}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/menu/tree [get]
+// @Router /admin/menu/tree [get]
 func (m *MenuApi) GetMenuTree(c *gin.Context) {
 	var menus []models.Permission
 	if err := global.DB.Where("type in (1, 2)").Order("sort").Find(&menus).Error; err != nil {
@@ -232,7 +232,7 @@ func buildMenuTree(menus []models.Permission, parentID uint) []gin.H {
 // @Produce json
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]gin.H{"id":int, "name":string, "children":[]gin.H}}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/menu/user-menus [get]
+// @Router /admin/menu/user-menus [get]
 func (m *MenuApi) GetUserMenus(c *gin.Context) {
 	// 从token中获取用户信息
 	userID, exists := c.Get("user_id")

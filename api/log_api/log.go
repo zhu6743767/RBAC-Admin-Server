@@ -23,7 +23,7 @@ import (
 // @Param end_time query string false "结束时间"
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":gin.H{"list":[]models.Log, "total":int}}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/log/list [get]
+// @Router /admin/log/list [get]
 func (l *LogApi) GetLogList(c *gin.Context) {
 	page := c.DefaultQuery("page", "1")
 	pageSize := c.DefaultQuery("page_size", "10")
@@ -81,7 +81,7 @@ func (l *LogApi) GetLogList(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":gin.H{"list":[]models.Log, "total":int}}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/log/user-logs [get]
+// @Router /admin/log/user-logs [get]
 func (l *LogApi) GetUserLogs(c *gin.Context) {
 	userID := c.Query("user_id")
 	if userID == "" {
@@ -135,7 +135,7 @@ func (l *LogApi) GetUserLogs(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/log/delete [delete]
+// @Router /admin/log/delete [delete]
 func (l *LogApi) DeleteLog(c *gin.Context) {
 	id := c.Query("id")
 	if id == "" {
@@ -167,7 +167,7 @@ func (l *LogApi) DeleteLog(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/log/delete-multiple [delete]
+// @Router /admin/log/delete-multiple [delete]
 func (l *LogApi) DeleteMultipleLogs(c *gin.Context) {
 	var req struct {
 		Ids []int `json:"ids" binding:"required"`
@@ -200,7 +200,7 @@ func (l *LogApi) DeleteMultipleLogs(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":gin.H{"total":int, "levels":map[string]int, "recent":[]gin.H}}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/log/dashboard [get]
+// @Router /admin/log/dashboard [get]
 func (l *LogApi) GetLogDashboard(c *gin.Context) {
 	// 获取总日志数
 	var total int64

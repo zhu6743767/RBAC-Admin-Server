@@ -29,3 +29,9 @@ func ComparePassword(hashedPassword, password string) bool {
 	// 如果err为nil，表示密码匹配成功
 	return err == nil
 }
+
+// MakePassword 密码加密（与HashedPassword功能相同，用于兼容API）
+// 输入明文密码，返回加密后的密码
+func MakePassword(password string) string {
+	return HashedPassword(password)
+}

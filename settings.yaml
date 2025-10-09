@@ -6,59 +6,70 @@
 # 🖥️ 服务器配置
 system:
   ip: 127.0.0.1               # 服务IP地址
-  port: 8080                  # 服务端口
+  port: 8090                  # 服务端口（与rbacAdmin保持一致）
+  mode: "debug"               # 运行模式: debug, release
 
 # 🗄️ 数据库配置
 db:
-  mode: mysql                  # 数据库类型: mysql, postgres, sqlite
-  host: 192.168.10.199         # 数据库主机
-  port: 3306                   # 数据库端口
-  user: root                   # 数据库用户名
-  password: Zdj_7819!          # 数据库密码（建议通过环境变量配置）
-  dbname: rbacadmin            # 数据库名称
-  max_open_conns: 100          # 最大连接数，防止连接耗尽
-  max_idle_conns: 10           # 空闲连接数，提高响应速度
-  conn_max_lifetime: 1h        # 连接生命周期
-  conn_max_idle_time: 30m      # 空闲连接超时
+  mode: "mysql"                # 数据库类型: mysql, postgres, sqlite
+  host: "127.0.0.1"           # 数据库主机
+  port: 3306                  # 数据库端口
+  user: "root"                 # 数据库用户名
+  password: "admin123"         # 数据库密码
+  dbname: "rbac_admin"         # 数据库名称
+  max_open_conns: 100         # 最大连接数
+  max_idle_conns: 10          # 空闲连接数
+  conn_max_lifetime: 3600     # 连接生命周期(秒)
 
 # 🔄 Redis配置
 redis:
-  addr: 192.168.10.199:6379    # Redis地址
-  password: ""                 # Redis密码
-  db: 0                        # Redis数据库编号
-  pool_size: 10                # 连接池大小
+  addr: "${REDIS_ADDR:127.0.0.1:6379}"          # Redis地址
+  password: "${REDIS_PASSWORD}"                 # Redis密码
+  db: ${REDIS_DB:3}                        # Redis数据库编号（与rbacAdmin保持一致）
+  pool_size: 20                # 连接池大小
   min_idle_conns: 5            # 最小空闲连接数
 
 # 📝 日志配置
 log:
   level: "info"                # 日志级别: debug, info, warn, error
   format: "text"               # 日志格式: json, text
-  output: "both"               # 输出方式: console, file, both
-  log_dir: "./logs"            # 日志目录
+  stdout: true                 # 输出到标准输出
+  dir: "./logs"                # 日志目录
   max_size: 100                # 最大文件大小(MB)
   max_backups: 3               # 最大备份文件数
   max_age: 7                   # 最大保存天数
   compress: true               # 是否压缩旧日志
   enable_caller: true          # 是否启用调用者信息
-  enable_trace: false          # 是否启用追踪信息
 
 # 🔐 JWT认证配置
 jwt:
-  secret: "aB3kL9mN7xY2qR8sT1uV4wE6zC0pF5gH"  # JWT密钥 (大小写字母+数字组合)
-  expire_hours: 24                           # Token过期时间(小时)
-  refresh_expire_hours: 168                  # 刷新Token过期时间(小时)
-  issuer: "rbac-admin-server"                # Token签发者
-  audience: "rbac-client"                    # Token受众
+  secret: "${JWT_SECRET:aB3kL9mN7xY2qR8sT1uV4wE6zC0pF5gH}"  # JWT密钥 (大小写字母+数字组合)
+  expire_hours: 72                            # Token过期时间(小时)（与rbacAdmin保持一致）
+  refresh_expire_hours: 168                   # 刷新Token过期时间(小时)
+  issuer: "rbacAdmin"                         # Token签发者（与rbacAdmin保持一致）
+  audience: "rbac-client"                     # Token受众
 
+# 📧 邮箱配置
 email:
-    user: 315420498@qq.com  # 发送者邮箱地址
-    password: zmkbniplmiqmbjag  # 授权密码
-    Host: smtp.qq.com  # 邮箱服务器
-    Port: 465  # 端口
+  user: "${EMAIL_USER}"  # 发送者邮箱地址
+  password: "${EMAIL_PASSWORD}"  # 授权密码
+  host: smtp.qq.com  # 邮箱服务器
+  port: 465  # 端口
 
 captcha:
     enable: true
+    width: 120
+    height: 40
+    length: 4
+    expire_seconds: 300
 
+# 📊 监控配置
+monitoring:
+  enabled: true
+  prometheus_port: 9090
+  health_check_path: /health
+  metrics_path: /metrics
+  trace_sampling_rate: 0.1
 
 # 🌐 CORS配置
 cors:
@@ -90,7 +101,6 @@ security:
 performance:
   enable_gzip: true            # 是否启用Gzip压缩
   cache_size: 100              # 缓存大小(MB)
-  request_timeout: 30s         # 请求超时时间
 
 # 📤 上传配置
 upload:

@@ -257,6 +257,7 @@ curl http://localhost:8080/health
 - swagger: API文档配置
 - monitoring: 监控配置
 - performance: 性能配置
+- captcha: 验证码配置
 
 ### 7.2 核心配置项说明
 
@@ -323,6 +324,25 @@ curl http://localhost:8080/health
 | compress | false | 是否压缩旧日志文件 |
 | stdout | true | 是否输出到标准输出 |
 | enable_caller | true | 是否记录调用者信息 |
+
+#### 7.2.6 监控配置
+
+| 配置项 | 默认值 | 说明 |
+|-------|-------|------|
+| enabled | true | 是否启用监控功能 |
+| prometheus_port | 9090 | Prometheus监控端口 |
+| health_check_path | "/health" | 健康检查API路径 |
+| metrics_path | "/metrics" | Prometheus指标收集路径 |
+| trace_sampling_rate | 0.1 | 分布式追踪采样率（0-1之间） |
+
+#### 7.2.7 验证码配置
+
+| 配置项 | 默认值 | 说明 |
+|-------|-------|------|
+| width | 120 | 验证码图片宽度 |
+| height | 40 | 验证码图片高度 |
+| length | 4 | 验证码字符长度 |
+| expire_seconds | 300 | 验证码有效期（秒） |
 
 ### 7.3 多环境配置策略
 

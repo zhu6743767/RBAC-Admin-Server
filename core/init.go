@@ -6,13 +6,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/casbin/casbin/v2"
-	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"rbac_admin_server/core/init_casbin"
 	"rbac_admin_server/core/init_gorm"
 	"rbac_admin_server/core/init_redis"
 	"rbac_admin_server/global"
-	"rbac_admin_server/models"
 )
 
 // InitSystem 初始化系统核心组件

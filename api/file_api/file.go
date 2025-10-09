@@ -2,7 +2,6 @@ package file_api
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -26,7 +25,7 @@ import (
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":models.File}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/file/upload [post]
+// @Router /admin/file/upload [post]
 func (f *FileApi) UploadFile(c *gin.Context) {
 	// 单个文件
 	file, _ := c.FormFile("file")
@@ -91,7 +90,7 @@ func (f *FileApi) UploadFile(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]models.File}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/file/upload-multiple [post]
+// @Router /admin/file/upload-multiple [post]
 func (f *FileApi) UploadMultipleFiles(c *gin.Context) {
 	// 多文件
 	form, _ := c.MultipartForm()
@@ -163,7 +162,7 @@ func (f *FileApi) UploadMultipleFiles(c *gin.Context) {
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 404 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/file/download/{id} [get]
+// @Router /admin/file/download/{id} [get]
 func (f *FileApi) DownloadFile(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
@@ -203,7 +202,7 @@ func (f *FileApi) DownloadFile(c *gin.Context) {
 // @Param type query string false "文件类型"
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":gin.H{"list":[]models.File, "total":int}}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/file/list [get]
+// @Router /admin/file/list [get]
 func (f *FileApi) GetFileList(c *gin.Context) {
 	page := c.DefaultQuery("page", "1")
 	pageSize := c.DefaultQuery("page_size", "10")
@@ -255,7 +254,7 @@ func (f *FileApi) GetFileList(c *gin.Context) {
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 404 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/file/delete/{id} [delete]
+// @Router /admin/file/delete/{id} [delete]
 func (f *FileApi) DeleteFile(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)

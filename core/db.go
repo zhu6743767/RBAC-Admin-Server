@@ -3,18 +3,10 @@ package core
 import (
 	"database/sql"
 	"fmt"
-	"time"
 
-	"gorm.io/driver/mysql"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-	"gorm.io/gorm/schema"
 	"rbac_admin_server/config"
 	"rbac_admin_server/global"
-
-	// 纯Go SQLite驱动，无需CGO
-	glebarezsqlite "github.com/glebarez/sqlite"
 )
 
 var (
@@ -99,18 +91,7 @@ func GetSQLDB() *sql.DB {
 	return SQLDB
 }
 
-// CloseRedis 关闭Redis连接
-func CloseRedis() error {
-	if global.Redis != nil {
-		global.Logger.Info("🔄 正在关闭Redis连接...")
-		if err := global.Redis.Close(); err != nil {
-			global.Logger.Errorf("❌ Redis连接关闭失败: %v", err)
-			return err
-		}
-		global.Logger.Info("✅ Redis连接已关闭")
-	}
-	return nil
-}
+
 
 // AutoMigrate 自动迁移数据库表结构
 func AutoMigrate(models ...interface{}) error {

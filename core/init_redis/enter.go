@@ -3,11 +3,10 @@ package init_redis
 import (
 	"context"
 	"fmt"
-	"rbac_admin_server/config"
 	"rbac_admin_server/global"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,15 +17,19 @@ func InitRedis() (*redis.Client, error) {
 	config := global.Config.Redis
 
 	client := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", config.Host, config.Port),
+		Addr:     config.Addr,
 		Password: config.Password,
 		DB:       config.DB,
 		// 连接池设置
-		PoolSize:        config.PoolSize,
-		MinIdleConns:    config.MinIdleConns,
-		MaxIdleConns:    config.MaxIdleConns,
-		ConnMaxIdleTime: time.Duration(config.ConnMaxIdleTime) * time.Second,
-		ConnMaxLifetime: time.Duration(config.ConnMaxLifetime) * time.Second,
+		PoolSize:            config.PoolSize,
+		MinIdleConns:        config.MinIdleConns,
+		DialTimeout:         time.Duration(config.DialTimeout) * time.Second,
+		ReadTimeout:         time.Duration(config.ReadTimeout) * time.Second,
+		WriteTimeout:        time.Duration(config.WriteTimeout) * time.Second,
+		PoolTimeout:         time.Duration(config.PoolTimeout) * time.Second,
+		MaxRetries:          config.MaxRetries,
+		MinRetryBackoff:     time.Duration(config.MinRetryBackoff) * time.Millisecond,
+		MaxRetryBackoff:     time.Duration(config.MaxRetryBackoff) * time.Millisecond,
 	})
 
 	// 测试连接

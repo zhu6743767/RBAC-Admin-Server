@@ -1,8 +1,9 @@
 package global
 
 import (
+	"context"
 	"github.com/casbin/casbin/v2"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"rbac_admin_server/config"
@@ -27,3 +28,7 @@ var Redis *redis.Client
 // Casbin 全局Casbin权限管理器
 // 通过global.Casbin可以进行权限验证
 var Casbin *casbin.CachedEnforcer
+
+// RedisCtx Redis上下文
+// 用于Redis操作的上下文对象
+var RedisCtx = context.Background()

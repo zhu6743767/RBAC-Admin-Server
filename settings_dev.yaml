@@ -48,14 +48,13 @@ redis:
 log:
   level: "debug"               # 开发环境使用debug级别
   format: "text"               # 文本格式更易读
-  output: "both"               # 同时输出到控制台和文件
-  log_dir: "./logs/dev"        # 开发环境日志目录
+  stdout: true                 # 输出到标准输出
+  dir: "./logs/dev"            # 开发环境日志目录
   max_size: 10                 # 小文件便于查看
   max_age: 3                   # 保留3天
   max_backups: 3
   compress: false              # 不压缩便于查看
   enable_caller: true          # 显示调用位置
-  enable_trace: true           # 显示堆栈跟踪
 
 # ⚡ 性能配置 - 开发环境宽松限制
 performance:

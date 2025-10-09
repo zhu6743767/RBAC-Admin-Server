@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"rbac_admin_server/global"
 )
 
@@ -30,24 +30,18 @@ func InitRedis() error {
 		Password: cfg.Password,         // 密码
 		DB:       cfg.DB,               // 数据库索引
 
-		// 连接池配置（使用配置文件中的值）
+		// 连接池配置
 		PoolSize:            cfg.PoolSize,                      // 连接池最大连接数
 		MinIdleConns:        cfg.MinIdleConns,                  // 最小空闲连接数
-		MaxConnAge:          time.Duration(cfg.MaxConnAge) * time.Second,          // 连接的最大存活时间
-		PoolTimeout:         time.Duration(cfg.PoolTimeout) * time.Second,         // 从连接池获取连接的超时时间
-		IdleTimeout:         time.Duration(cfg.IdleTimeout) * time.Second,         // 空闲连接的超时时间
-		IdleCheckFrequency:  time.Duration(cfg.IdleCheckFrequency) * time.Second,  // 空闲连接检查频率
 		ReadTimeout:         time.Duration(cfg.ReadTimeout) * time.Second,         // 读取超时
 		WriteTimeout:        time.Duration(cfg.WriteTimeout) * time.Second,        // 写入超时
 		DialTimeout:         time.Duration(cfg.DialTimeout) * time.Second,         // 连接超时
+		PoolTimeout:         time.Duration(cfg.PoolTimeout) * time.Second,         // 从连接池获取连接的超时时间
 
 		// 连接重试配置
 		MaxRetries:          cfg.MaxRetries,          // 最大重试次数
 		MinRetryBackoff:     time.Duration(cfg.MinRetryBackoff) * time.Millisecond,     // 最小重试间隔
 		MaxRetryBackoff:     time.Duration(cfg.MaxRetryBackoff) * time.Millisecond,     // 最大重试间隔
-
-		// TLS配置
-		TLSConfig:           nil,                     // TLS配置
 	})
 
 	// 测试连接

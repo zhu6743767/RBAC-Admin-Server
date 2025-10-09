@@ -4,6 +4,7 @@ import (
 	"rbac_admin_server/global"
 	"rbac_admin_server/models"
 	"rbac_admin_server/utils"
+	"rbac_admin_server/utils/email"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,23 +15,25 @@ import (
 // @Tags 用户管理
 // @Accept json
 // @Produce json
-// @Param register body struct{Username string, Password string, Nickname string, Email string, Phone string} true "注册信息"
+// @Param register body struct{Username string, Password string, Nickname string, Email string, Phone string, EmailID string, EmailCode string} true "注册信息"
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":models.User}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/public/register [post]
+// @Router /public/register [post]
 func (u *UserApi) Register(c *gin.Context) {
 	var req struct {
-		Username string `json:"username" binding:"required"`
-		Password string `json:"password" binding:"required"`
-		Nickname string `json:"nickname" binding:"required"`
-		Email    string `json:"email" binding:"required,email"`
-		Phone    string `json:"phone"`
+		Username  string `json:"username" binding:"required"`
+		Password  string `json:"password" binding:"required"`
+		Nickname  string `json:"nickname" binding:"required"`
+		Email     string `json:"email" binding:"required,email"`
+		Phone     string `json:"phone"`
+		EmailID   string `json:"emailID" binding:"required"`
+		EmailCode string `json:"emailCode" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		global.Logger.Error("注册参数错误: " + err.Error())
-		c.JSON(400, gin.H{"code": 400, "msg": "参数错误"})
+		c.JSON(400, gin.H{"code": utils.ERROR_INVALID_PARAM, "msg": utils.GetErrMsg(utils.ERROR_INVALID_PARAM)})
 		return
 	}
 
@@ -39,7 +42,7 @@ func (u *UserApi) Register(c *gin.Context) {
 	global.DB.Model(&models.User{}).Where("username = ?", req.Username).Count(&count)
 	if count > 0 {
 		global.Logger.Error("用户名已存在: " + req.Username)
-		c.JSON(400, gin.H{"code": 400, "msg": "用户名已存在"})
+		c.JSON(400, gin.H{"code": utils.ERROR_USERNAME_USED, "msg": utils.GetErrMsg(utils.ERROR_USERNAME_USED)})
 		return
 	}
 
@@ -47,7 +50,15 @@ func (u *UserApi) Register(c *gin.Context) {
 	global.DB.Model(&models.User{}).Where("email = ?", req.Email).Count(&count)
 	if count > 0 {
 		global.Logger.Error("邮箱已存在: " + req.Email)
-		c.JSON(400, gin.H{"code": 400, "msg": "邮箱已存在"})
+		email.Remove(req.EmailID) // 清理验证码记录
+		c.JSON(400, gin.H{"code": utils.ERROR_INVALID_PARAM, "msg": "邮箱已存在"})
+		return
+	}
+
+	// 验证邮箱验证码
+	if !email.Verify(req.EmailID, req.Email, req.EmailCode) {
+		global.Logger.Error("邮箱验证码错误: " + req.Email)
+		c.JSON(400, gin.H{"code": utils.ERROR_EMAIL_CODE_WRONG, "msg": utils.GetErrMsg(utils.ERROR_EMAIL_CODE_WRONG)})
 		return
 	}
 
@@ -56,7 +67,8 @@ func (u *UserApi) Register(c *gin.Context) {
 		global.DB.Model(&models.User{}).Where("phone = ?", req.Phone).Count(&count)
 		if count > 0 {
 			global.Logger.Error("手机号已存在: " + req.Phone)
-			c.JSON(400, gin.H{"code": 400, "msg": "手机号已存在"})
+			email.Remove(req.EmailID) // 清理验证码记录
+			c.JSON(400, gin.H{"code": utils.ERROR_INVALID_PARAM, "msg": "手机号已存在"})
 			return
 		}
 	}
@@ -74,14 +86,18 @@ func (u *UserApi) Register(c *gin.Context) {
 	// 保存用户到数据库
 	if err := global.DB.Create(&user).Error; err != nil {
 		global.Logger.Error("创建用户失败: " + err.Error())
-		c.JSON(500, gin.H{"code": 500, "msg": "注册失败"})
+		email.Remove(req.EmailID) // 注册失败，清理验证码记录
+		c.JSON(500, gin.H{"code": utils.ERROR, "msg": utils.GetErrMsg(utils.ERROR)})
 		return
 	}
 
+	// 注册成功，清理验证码记录
+	email.Remove(req.EmailID)
+
 	global.Logger.Infof("用户注册成功: %s", req.Username)
 	c.JSON(200, gin.H{
-		"code": 200,
-		"msg":  "注册成功",
+		"code": utils.SUCCESS,
+		"msg":  utils.GetErrMsg(utils.SUCCESS),
 		"data": user,
 	})
 }
@@ -94,7 +110,7 @@ func (u *UserApi) Register(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} gin.H{"code":int, "msg":string, "data":[]models.User}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/user/list [get]
+// @Router /admin/user/list [get]
 func (u *UserApi) GetUserList(c *gin.Context) {
 	var users []models.User
 	if err := global.DB.Find(&users).Error; err != nil {
@@ -120,7 +136,7 @@ func (u *UserApi) GetUserList(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/user/create [post]
+// @Router /admin/user/create [post]
 func (u *UserApi) CreateUser(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -155,7 +171,7 @@ func (u *UserApi) CreateUser(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/user/update [put]
+// @Router /admin/user/update [put]
 func (u *UserApi) UpdateUser(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -192,7 +208,7 @@ func (u *UserApi) UpdateUser(c *gin.Context) {
 // @Success 200 {object} gin.H{"code":int, "msg":string}
 // @Failure 400 {object} gin.H{"code":int, "msg":string}
 // @Failure 500 {object} gin.H{"code":int, "msg":string}
-// @Router /api/admin/user/delete [delete]
+// @Router /admin/user/delete [delete]
 func (u *UserApi) DeleteUser(c *gin.Context) {
 	id := c.Query("id")
 	if id == "" {

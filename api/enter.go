@@ -16,11 +16,12 @@ type Api struct {
 	UserApi       *user_api.UserApi
 	RoleApi       *role_api.RoleApi
 	PermissionApi *permission_api.PermissionApi
-	DeptApi       *dept_api.DeptApi
+	DeptApi       *dept_api.DepartmentApi
 	MenuApi       *menu_api.MenuApi
 	FileApi       *file_api.FileApi
 	LogApi        *log_api.LogApi
 	ProfileApi    *profile_api.ProfileApi
+	HealthApi     *HealthApi
 }
 
 // App 全局API实例，供外部调用
@@ -31,9 +32,10 @@ func InitApi() {
 	App.UserApi = user_api.NewUserApi()
 	App.RoleApi = role_api.NewRoleApi()
 	App.PermissionApi = permission_api.NewPermissionApi()
-	App.DeptApi = dept_api.NewDeptApi()
+	App.DeptApi = dept_api.NewDepartmentApi()
 	App.MenuApi = menu_api.NewMenuApi()
 	App.FileApi = file_api.NewFileApi()
 	App.LogApi = log_api.NewLogApi()
 	App.ProfileApi = profile_api.NewProfileApi()
+	App.HealthApi = NewHealthApi()
 }
