@@ -6,26 +6,26 @@
 # 🖥️ 服务器配置
 system:
   ip: 127.0.0.1               # 服务IP地址
-  port: 8090                  # 服务端口（与rbacAdmin保持一致）
+  port: 8080                  # 服务端口（与.env中的SYSTEM_PORT保持一致）
   mode: "debug"               # 运行模式: debug, release
 
 # 🗄️ 数据库配置
 db:
   mode: "mysql"                # 数据库类型: mysql, postgres, sqlite
-  host: "127.0.0.1"           # 数据库主机
+  host: "192.168.10.199"       # 数据库主机（与.env中的DB_HOST保持一致）
   port: 3306                  # 数据库端口
   user: "root"                 # 数据库用户名
-  password: "admin123"         # 数据库密码
-  dbname: "rbac_admin"         # 数据库名称
+  password: "Zdj_7819!"        # 数据库密码（与.env中的DB_PASSWORD保持一致）
+  dbname: "rbacadmin"          # 数据库名称（与.env中的DB_DBNAME保持一致）
   max_open_conns: 100         # 最大连接数
   max_idle_conns: 10          # 空闲连接数
   conn_max_lifetime: 3600     # 连接生命周期(秒)
 
 # 🔄 Redis配置
 redis:
-  addr: "${REDIS_ADDR:127.0.0.1:6379}"          # Redis地址
-  password: "${REDIS_PASSWORD}"                 # Redis密码
-  db: ${REDIS_DB:3}                        # Redis数据库编号（与rbacAdmin保持一致）
+  addr: "192.168.10.199:6379"          # Redis地址（与.env中的REDIS_ADDR保持一致）
+  password: ""                          # Redis密码
+  db: 4                                 # Redis数据库编号（与.env中的REDIS_DB保持一致）
   pool_size: 20                # 连接池大小
   min_idle_conns: 5            # 最小空闲连接数
 
@@ -43,11 +43,11 @@ log:
 
 # 🔐 JWT认证配置
 jwt:
-  secret: "${JWT_SECRET:aB3kL9mN7xY2qR8sT1uV4wE6zC0pF5gH}"  # JWT密钥 (大小写字母+数字组合)
-  expire_hours: 72                            # Token过期时间(小时)（与rbacAdmin保持一致）
+  secret: "AbCdEfGhIjKlMnOpQrStUvWxYz1234567890"  # JWT密钥 (与.env中的JWT_SECRET保持一致)
+  expire_hours: 24                            # Token过期时间(小时)（与.env中的JWT_EXPIRE_HOURS保持一致）
   refresh_expire_hours: 168                   # 刷新Token过期时间(小时)
-  issuer: "rbacAdmin"                         # Token签发者（与rbacAdmin保持一致）
-  audience: "rbac-client"                     # Token受众
+  issuer: "rbac-admin"                         # Token签发者（与.env中的JWT_ISSUER保持一致）
+  audience: "rbac-admin"                       # Token受众（与.env中的JWT_AUDIENCE保持一致）
 
 # 📧 邮箱配置
 email:
