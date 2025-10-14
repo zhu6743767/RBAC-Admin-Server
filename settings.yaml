@@ -112,11 +112,6 @@ upload:
     - "image/png"
     - "application/pdf"
 
-# 📊 监控配置
-monitoring:
-  enable: false                # 是否启用监控
-  prometheus_port: 9090        # Prometheus监控端口
-
 # 📚 Swagger配置
 swagger:
   enable: true                 # 是否启用Swagger

@@ -5,58 +5,31 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	"rbac_admin_server/core/init_redis"
 	"rbac_admin_server/global"
 )
 
 // RedisCtx 全局Redis上下文
 var RedisCtx = context.Background()
 
-// InitRedis 初始化Redis连接
-// 支持单节点模式
-// 配置连接池参数，Addr为空时跳过初始化
+// InitRedis 初始化Redis连接（已废弃，请使用init_redis包中的InitRedis函数）
+// 注意：此函数从版本1.2.0开始已废弃
+// 建议使用core/init_redis包中的InitRedis函数进行Redis初始化
 func InitRedis() error {
-	// 如果全局配置不存在或者Redis地址为空，则跳过初始化
+	global.Logger.Warn("⚠️ core/InitRedis已废弃，请使用init_redis包中的InitRedis函数")
 	if global.Config == nil || global.Config.Redis.Addr == "" {
 		global.Logger.Warn("Redis配置为空，跳过初始化")
 		return nil
 	}
 
-	cfg := global.Config.Redis
-
-	// 创建Redis客户端
-	client := redis.NewClient(&redis.Options{
-		Addr:     cfg.Addr,             // 服务器地址
-		Password: cfg.Password,         // 密码
-		DB:       cfg.DB,               // 数据库索引
-
-		// 连接池配置
-		PoolSize:            cfg.PoolSize,                      // 连接池最大连接数
-		MinIdleConns:        cfg.MinIdleConns,                  // 最小空闲连接数
-		ReadTimeout:         time.Duration(cfg.ReadTimeout) * time.Second,         // 读取超时
-		WriteTimeout:        time.Duration(cfg.WriteTimeout) * time.Second,        // 写入超时
-		DialTimeout:         time.Duration(cfg.DialTimeout) * time.Second,         // 连接超时
-		PoolTimeout:         time.Duration(cfg.PoolTimeout) * time.Second,         // 从连接池获取连接的超时时间
-
-		// 连接重试配置
-		MaxRetries:          cfg.MaxRetries,          // 最大重试次数
-		MinRetryBackoff:     time.Duration(cfg.MinRetryBackoff) * time.Millisecond,     // 最小重试间隔
-		MaxRetryBackoff:     time.Duration(cfg.MaxRetryBackoff) * time.Millisecond,     // 最大重试间隔
-	})
-
-	// 测试连接
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err := client.Ping(ctx).Result()
+	// 调用新的初始化函数
+	client, err := init_redis.InitRedis()
 	if err != nil {
 		return fmt.Errorf("Redis连接失败: %v", err)
 	}
 
 	// 设置全局Redis客户端
 	global.Redis = client
-
-	global.Logger.Info(fmt.Sprintf("Redis连接成功: %s, DB: %d", cfg.Addr, cfg.DB))
 
 	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -9,8 +10,6 @@ import (
 	"rbac_admin_server/flags"
 	"rbac_admin_server/global"
 	"rbac_admin_server/routes"
-
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -19,7 +18,9 @@ func main() {
 
 	// 处理命令行参数
 	if err := flags.HandleCommandLineArgs(args); err != nil {
-		logrus.Fatalf("❌ 命令处理失败: %v", err)
+		// 注意：这里使用fmt输出错误，因为日志系统可能尚未初始化
+		fmt.Printf("❌ 命令处理失败: %v\n", err)
+		os.Exit(1)
 	}
 
 	// 如果是服务器模式，则启动服务器

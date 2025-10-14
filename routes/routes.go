@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 	"rbac_admin_server/api"
 	"rbac_admin_server/api/captcha_api"
 	"rbac_admin_server/api/email_api"
@@ -14,18 +13,18 @@ import (
 	"rbac_admin_server/utils/captcha"
 )
 
-// SetDebugMode 设置Gin为调试模式
-func SetDebugMode() {
-	gin.SetMode(gin.DebugMode)
-}
+// Run 运行路由和HTTP服务器
+func Run() {
+	// 获取系统配置
+	s := global.Config.System
 
-// SetReleaseMode 设置Gin为发布模式
-func SetReleaseMode() {
-	gin.SetMode(gin.ReleaseMode)
-}
+	// 设置Gin模式
+	if s.Mode == "debug" {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
-// SetupRouter 设置路由
-func SetupRouter() *gin.Engine {
 	// 创建默认路由
 	r := gin.Default()
 
@@ -64,7 +63,7 @@ func SetupRouter() *gin.Engine {
 
 	// 需要认证的路由组
 	admin := r.Group("/admin")
-	// 使用Auth中间件进行身份验证，而不是JWTAuth
+	// 使用Auth中间件进行身份验证
 	admin.Use(middleware.Auth())
 	{
 		// 用户管理模块
@@ -92,22 +91,12 @@ func SetupRouter() *gin.Engine {
 		api.App.ProfileApi.RegisterRoutes(admin)
 	}
 
-	return r
-}
-
-// Run 运行路由和HTTP服务器
-func Run() {
-	// 创建路由
-	router := SetupRouter()
-
-	// 获取系统配置
-	s := global.Config.System
-
 	// 启动HTTP服务器
-	logrus.Infof("后端服务运行在 http://%s:%d", s.IP, s.Port)
+	addr := fmt.Sprintf("%s:%d", s.IP, s.Port)
+	global.Logger.Infof("后端服务运行在 http://%s", addr)
 
 	// 启动服务器
-	if err := router.Run(fmt.Sprintf("%s:%d", s.IP, s.Port)); err != nil {
-		logrus.Fatalf("服务器启动失败: %v", err)
+	if err := r.Run(addr); err != nil {
+		global.Logger.Fatalf("服务器启动失败: %v", err)
 	}
 }

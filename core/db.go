@@ -9,20 +9,8 @@ import (
 	"rbac_admin_server/global"
 )
 
-var (
-	// DB 全局数据库连接
-	DB *gorm.DB
-	// SQLDB 全局SQL数据库连接
-	SQLDB *sql.DB
-)
-
-// InitGorm 初始化GORM数据库连接（废弃，请使用init_gorm包中的InitGorm函数）
-// 支持MySQL、PostgreSQL、SQLite三种数据库
-// 自动配置连接池参数，支持日志级别设置
-func InitGorm(cfg *config.DBConfig) error {
-	global.Logger.Warnf("⚠️ core/InitGorm已废弃，请使用init_gorm包中的InitGorm函数")
-	return fmt.Errorf("该函数已废弃，请使用init_gorm包中的InitGorm函数")
-}
+// 注意：InitGorm方法已从版本1.2.0开始移除
+// 请直接使用init_gorm包中的InitGorm函数进行数据库初始化
 
 // buildMysqlDSN 构建MySQL连接字符串
 func buildMysqlDSN(cfg *config.DBConfig) string {
@@ -87,18 +75,22 @@ func GetDB() *gorm.DB {
 }
 
 // GetSQLDB 获取SQL数据库连接
-func GetSQLDB() *sql.DB {
-	return SQLDB
+func GetSQLDB() (*sql.DB, error) {
+	if global.DB == nil {
+		return nil, fmt.Errorf("数据库连接未初始化")
+	}
+	return global.DB.DB()
 }
 
 
 
 // AutoMigrate 自动迁移数据库表结构
+// 注意：此方法从版本1.2.0开始已废弃，建议使用init_gorm包中的MigrateTables函数
 func AutoMigrate(models ...interface{}) error {
-	if DB == nil {
+	if global.DB == nil {
 		return fmt.Errorf("数据库连接未初始化")
 	}
-	return DB.AutoMigrate(models...)
+	return global.DB.AutoMigrate(models...)
 }
 
 // IsRecordNotFound 判断是否为记录未找到错误

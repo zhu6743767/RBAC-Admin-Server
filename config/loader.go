@@ -63,26 +63,45 @@ func Load(filename string) (*Config, error) {
 // replaceEnvVars 替换配置文件中的环境变量占位符
 func replaceEnvVars(content string) string {
 	// 替换 ${VAR_NAME} 格式的环境变量
+	var result strings.Builder
+	i := 0
 	for {
-		start := strings.Index(content, "$")
+		// 查找 ${ 的位置
+		start := strings.Index(content[i:], "${")
 		if start == -1 {
+			// 没有更多环境变量占位符，添加剩余内容并退出
+			result.WriteString(content[i:])
 			break
 		}
-		end := strings.Index(content[start:], "}")
+		
+		// 添加 ${ 之前的内容
+		result.WriteString(content[i : i+start])
+		
+		// 查找对应的 } 位置
+		end := strings.Index(content[i+start+2:], "}")
 		if end == -1 {
+			// 没有找到对应的 }，添加剩余内容并退出
+			result.WriteString(content[i+start:])
 			break
 		}
-		fullMatch := content[start : start+end+1]
-		varName := content[start+2 : start+end]
+		
+		// 提取环境变量名
+		varName := content[i+start+2 : i+start+2+end]
+		
 		// 获取环境变量值，如果不存在则使用默认值
 		value := os.Getenv(varName)
 		if value == "" {
 			// 尝试从 .env 文件加载
 			value = getEnvFromFile(varName)
 		}
-		content = strings.ReplaceAll(content, fullMatch, value)
+		
+		// 添加环境变量的值
+		result.WriteString(value)
+		
+		// 更新索引位置到 } 之后
+	i += start + 2 + end + 1
 	}
-	return content
+	return result.String()
 }
 
 // getEnvFromFile 从 .env 文件获取环境变量

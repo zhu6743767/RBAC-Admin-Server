@@ -59,11 +59,8 @@ func InitSystem() error {
 	return nil
 }
 
-// InitCasbin 初始化Casbin权限管理（废弃，请使用init_casbin包中的InitCasbin函数）
-func InitCasbin() error {
-	global.Logger.Warnf("⚠️ core/InitCasbin已废弃，请使用init_casbin包中的InitCasbin函数")
-	return fmt.Errorf("该函数已废弃，请使用init_casbin包中的InitCasbin函数")
-}
+// 注意：InitCasbin方法已移除，请直接使用init_casbin包中的InitCasbin函数
+// 此方法已从版本1.2.0开始移除，使用新的模块化设计
 
 // AutoMigrateModels 自动迁移所有模型
 func AutoMigrateModels() error {
